@@ -25,7 +25,7 @@ pub struct PrismaFeature {
     pub maker_quantity: f32,
     pub taker_quantity: f32,
     pub aggressiveness: f32,
-    pub obi: (f32, f32),
+    pub obi: (f32, f32, f32, f32),
 }
 
 #[allow(dead_code)]
@@ -56,7 +56,7 @@ impl PrismaEngine {
                 maker_quantity: 0f32,
                 taker_quantity: 0f32,
                 aggressiveness: 0.0,
-                obi: (0.0, 0.0),
+                obi: (0.0, 0.0, 0.0, 0.0),
             },
         }
     }
@@ -96,8 +96,10 @@ impl PrismaEngine {
                 Some(mut fut_ob_data) = self.rx_orderbook.recv() => {
                     if let Some(price) = self.price {
                         self.feature.time = fut_ob_data.time;
-                        self.feature.obi.0 = fut_ob_data.orderbook_imbalance(price, 0.05);
-                        self.feature.obi.1 = fut_ob_data.orderbook_imbalance(price, 0.10);
+                        self.feature.obi.0 = fut_ob_data.orderbook_imbalance(price, 0.01);
+                        self.feature.obi.1 = fut_ob_data.orderbook_imbalance(price, 0.02);
+                        self.feature.obi.2 = fut_ob_data.orderbook_imbalance(price, 0.05);
+                        self.feature.obi.3 = fut_ob_data.orderbook_imbalance(price, 0.10);
                         self.feature.price = price;
 
                         // Send the feature to the database

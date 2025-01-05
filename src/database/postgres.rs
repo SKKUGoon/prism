@@ -29,14 +29,14 @@ pub async fn batch_insert_into_timescale(
         return Ok(());
     }
 
-    let base_query = String::from("INSERT INTO binance.features (time, source, price, maker_quantity, taker_quantity, aggressive, obi_005, obi_010) VALUES ");
+    let base_query = String::from("INSERT INTO binance.features2 (time, source, price, maker_quantity, taker_quantity, aggressive, obi_005, obi_010, obi_015, obi_020) VALUES ");
     let mut placeholders: Vec<String> = Vec::new();
     let mut values: Vec<Box<dyn tokio_postgres::types::ToSql + Sync + Send>> = Vec::new();
 
     let mut param_index = 1;
     for feature in features {
         placeholders.push(format!(
-            "(to_timestamp(${}::FLOAT8), ${}, ${}, ${}, ${}, ${}, ${}, ${})",
+            "(to_timestamp(${}::FLOAT8), ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${})",
             param_index,
             param_index + 1,
             param_index + 2,
@@ -44,7 +44,9 @@ pub async fn batch_insert_into_timescale(
             param_index + 4,
             param_index + 5,
             param_index + 6,
-            param_index + 7
+            param_index + 7,
+            param_index + 8,
+            param_index + 9
         ));
         values.push(Box::new(feature.time as f64 / 1000.0));
         values.push(Box::new(feature.source.clone()));
@@ -52,10 +54,12 @@ pub async fn batch_insert_into_timescale(
         values.push(Box::new(feature.maker_quantity));
         values.push(Box::new(feature.taker_quantity));
         values.push(Box::new(feature.aggressiveness));
-        values.push(Box::new(feature.obi.0));
-        values.push(Box::new(feature.obi.1));
+        values.push(Box::new(feature.obi.0)); // Orderbook imbalance 0.01
+        values.push(Box::new(feature.obi.1)); // Orderbook imbalance 0.02
+        values.push(Box::new(feature.obi.2)); // Orderbook imbalance 0.05
+        values.push(Box::new(feature.obi.3)); // Orderbook imbalance 0.10
 
-        param_index += 8;
+        param_index += 10;
     }
     let combined_data = placeholders.join(",");
     let query = format!("{}{}", base_query, combined_data);
