@@ -5,6 +5,7 @@ use crate::data::stream::StreamHandler;
 use data::market::binance_aggtrade_future::BinanceFutureAggTradeStreamHandler;
 use data::market::binance_aggtrade_spot::BinanceSpotAggTradeStreamHandler;
 use data::orderbook::binance_orderbook_spot::BinanceSpotOrderbookStreamHandler;
+use database::postgres::timescale_batch_writer;
 use log::{error, info, warn};
 use prism::engine::PrismaEngine;
 use tokio::{signal, sync::mpsc};
@@ -26,19 +27,41 @@ async fn main() {
     let (tx_future_aggtrade_data, rx_future_aggtrade_prism) = mpsc::channel(9999);
     let (tx_spot_aggtrade_data, rx_spot_aggtrade_prism) = mpsc::channel(9999);
 
-    // Engine Start
-    let mut engine = PrismaEngine::new(
+    let (tx_future_prisma_feature, rx_future_prisma_feature) = mpsc::channel(2000);
+    let (tx_spot_prisma_feature, rx_spot_prisma_feature) = mpsc::channel(2000);
+
+    /* Engine Start */
+    let mut future_engine = PrismaEngine::new(
+        "future",
         rx_future_orderbook_prism,
         rx_future_aggtrade_prism,
+        tx_future_prisma_feature,
+    );
+    let mut spot_engine = PrismaEngine::new(
+        "spot",
         rx_spot_orderbook_prism,
         rx_spot_aggtrade_prism,
+        tx_spot_prisma_feature,
     );
 
+    tokio::spawn(async move { future_engine.work().await });
+    tokio::spawn(async move { spot_engine.work().await });
+
+    /* Timescale Insertion */
     tokio::spawn(async move {
-        engine.work().await;
+        if let Err(e) = timescale_batch_writer(rx_future_prisma_feature).await {
+            error!("Timescale batch writer error: {}", e);
+        }
     });
 
-    // Price feed - Future
+    tokio::spawn(async move {
+        if let Err(e) = timescale_batch_writer(rx_spot_prisma_feature).await {
+            error!("Timescale batch writer error: {}", e);
+        }
+    });
+
+    /* Price Feed */
+    // Future
     let binance_future_aggtrade =
         BinanceFutureAggTradeStreamHandler::new(test_symbol.clone(), tx_future_aggtrade_data);
 
@@ -55,7 +78,7 @@ async fn main() {
         }
     });
 
-    // Price feed - Spot
+    // Spot
     let binance_spot_aggtrade =
         BinanceSpotAggTradeStreamHandler::new(test_symbol.clone(), tx_spot_aggtrade_data);
 
@@ -72,7 +95,8 @@ async fn main() {
         }
     });
 
-    // Exchange combined orderbook - Future
+    /* Orderbook */
+    // Future
     let mut future_book = Orderbook::new(rx_future_orderbook_data, tx_future_orderbook_prism);
     let binance_future_orderbook = BinanceFutureOrderbookStreamHandler::new(
         test_symbol.clone(),
@@ -92,11 +116,9 @@ async fn main() {
         }
     });
 
-    tokio::spawn(async move {
-        future_book.listen().await;
-    });
+    tokio::spawn(async move { future_book.listen().await });
 
-    // Exchange combined orderbook - Spot
+    // Spot
     let mut spot_book = Orderbook::new(rx_spot_orderbook_data, tx_spot_orderbook_prism);
     let binance_spot_orderbook =
         BinanceSpotOrderbookStreamHandler::new(test_symbol.clone(), tx_spot_orderbook_data.clone());
@@ -114,11 +136,9 @@ async fn main() {
         }
     });
 
-    tokio::spawn(async move {
-        spot_book.listen().await;
-    });
+    tokio::spawn(async move { spot_book.listen().await });
 
-    // Keep alive
+    /* Keep alive */
     tokio::select! {
         // Keep alive
         _ = signal::ctrl_c() => {

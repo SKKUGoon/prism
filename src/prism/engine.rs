@@ -1,97 +1,62 @@
-use log::info;
-use tokio::sync::mpsc::Receiver;
+use tokio::sync::mpsc::{Receiver, Sender};
 
 use crate::data::market::binance_aggtrade_future::MarketData;
 use crate::data::orderbook::book::OrderbookData;
 
 pub struct PrismaEngine {
-    rx_future_orderbook: Receiver<OrderbookData>,
-    rx_future_market: Receiver<MarketData>,
-
-    rx_spot_orderbook: Receiver<OrderbookData>,
-    rx_spot_market: Receiver<MarketData>,
-
-    fut_price: Option<f32>,
-    spot_price: Option<f32>,
+    rx_orderbook: Receiver<OrderbookData>,
+    rx_market: Receiver<MarketData>,
+    tx_feature: Sender<PrismaFeature>,
+    price: Option<f32>,
 
     latest_update_time: u64,
 
     // Trade indicators
-    fut_feature: PrismaFeature,
-    spot_feature: PrismaFeature,
-
-    #[allow(dead_code)]
-    trade_config: PrismaTradeConfig, // Not used yet
+    feature: PrismaFeature,
 }
 
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
-struct PrismaFeature {
-    aggressive_measure_begin: u64,
-    aggressive_measure_next: u64,
-    maker_quantity: f32,
-    taker_quantity: f32,
-    aggressiveness: f32,
-    obi: (f32, f32),
-}
-
-#[derive(Debug, Clone)]
-#[allow(dead_code)]
-struct PrismaTradeConfig {
-    leverage: u8,
-    max_leverage: u8,
-
-    loss_cut: f32,
-    take_profit: f32,
-
-    max_position_size: f32,
+pub struct PrismaFeature {
+    pub time: u64,
+    pub source: String,
+    pub price: f32,
+    pub aggressive_measure_begin: u64,
+    pub aggressive_measure_next: u64,
+    pub maker_quantity: f32,
+    pub taker_quantity: f32,
+    pub aggressiveness: f32,
+    pub obi: (f32, f32),
 }
 
 #[allow(dead_code)]
 impl PrismaEngine {
     pub fn new(
-        rx_future_orderbook: Receiver<OrderbookData>,
-        rx_future_market: Receiver<MarketData>,
-
-        rx_spot_orderbook: Receiver<OrderbookData>,
-        rx_spot_market: Receiver<MarketData>,
+        source: &str,
+        rx_orderbook: Receiver<OrderbookData>,
+        rx_market: Receiver<MarketData>,
+        tx_feature: Sender<PrismaFeature>,
     ) -> Self {
+        // rx_orderbook, rx_market: Collects data from the orderbook and market stream
+        // tx_feature: Sends the engineered features to the database / trading executor
         Self {
-            rx_future_orderbook,
-            rx_future_market,
+            rx_orderbook,
+            rx_market,
+            tx_feature,
 
-            rx_spot_orderbook,
-            rx_spot_market,
-
-            fut_price: None,
-            spot_price: None,
+            price: None,
 
             latest_update_time: 0,
 
-            fut_feature: PrismaFeature {
+            feature: PrismaFeature {
+                time: 0,
+                source: source.to_string(),
+                price: 0.0,
                 aggressive_measure_begin: 0,
                 aggressive_measure_next: 0,
                 maker_quantity: 0f32,
                 taker_quantity: 0f32,
                 aggressiveness: 0.0,
                 obi: (0.0, 0.0),
-            },
-
-            spot_feature: PrismaFeature {
-                aggressive_measure_begin: 0,
-                aggressive_measure_next: 0,
-                maker_quantity: 0f32,
-                taker_quantity: 0f32,
-                aggressiveness: 0.0,
-                obi: (0.0, 0.0),
-            },
-
-            trade_config: PrismaTradeConfig {
-                leverage: 1,
-                max_leverage: 30,
-                loss_cut: 0.5,
-                take_profit: 0.10,
-                max_position_size: 1000.0,
             },
         }
     }
@@ -99,82 +64,46 @@ impl PrismaEngine {
     pub async fn work(&mut self) {
         loop {
             tokio::select! {
-                Some(fut_mkt_data) = self.rx_future_market.recv() => {
-                    self.fut_price = Some(fut_mkt_data.price);
+                Some(fut_mkt_data) = self.rx_market.recv() => {
+                    self.price = Some(fut_mkt_data.price);
+                    self.feature.price = fut_mkt_data.price;
+                    self.feature.time = fut_mkt_data.time;
 
                     match fut_mkt_data.buyer_market_maker {
-                        true => self.fut_feature.maker_quantity += fut_mkt_data.quantity,
-                        false => self.fut_feature.taker_quantity += fut_mkt_data.quantity,
+                        true => self.feature.maker_quantity += fut_mkt_data.quantity,
+                        false => self.feature.taker_quantity += fut_mkt_data.quantity,
                     }
 
-                    if self.fut_feature.aggressive_measure_begin == 0 {
+                    if self.feature.aggressive_measure_begin == 0 {
                         // Initilize the aggressive measure
-                        self.fut_feature.aggressive_measure_begin = fut_mkt_data.time;
-                        self.fut_feature.aggressive_measure_next = fut_mkt_data.time + 500; // Add 5 seconds (5000ms)
-                    } else if fut_mkt_data.time > self.fut_feature.aggressive_measure_next {
-                        self.fut_feature.aggressiveness = self.fut_feature.maker_quantity / (self.fut_feature.taker_quantity + self.fut_feature.maker_quantity);
+                        self.feature.aggressive_measure_begin = fut_mkt_data.time;
+                        self.feature.aggressive_measure_next = fut_mkt_data.time + 500; // Add 5 seconds (5000ms)
+                    } else if fut_mkt_data.time > self.feature.aggressive_measure_next {
+                        self.feature.aggressiveness = self.feature.maker_quantity / (self.feature.taker_quantity + self.feature.maker_quantity);
 
-                        self.fut_feature.aggressive_measure_begin = fut_mkt_data.time;
-                        self.fut_feature.aggressive_measure_next = fut_mkt_data.time + 500; // Add 5 seconds (5000ms)
+                        self.feature.aggressive_measure_begin = fut_mkt_data.time;
+                        self.feature.aggressive_measure_next = fut_mkt_data.time + 500; // Add 5 seconds (5000ms)
 
                         // Re initialize the feature.maker_quantity and feature.taker_quantity
-                        self.fut_feature.maker_quantity = 0f32;
-                        self.fut_feature.taker_quantity = 0f32;
+                        self.feature.maker_quantity = 0f32;
+                        self.feature.taker_quantity = 0f32;
                     }
 
+                    // Send the feature to the database
+                    self.tx_feature.send(self.feature.clone()).await.unwrap();
                     self.latest_update_time = fut_mkt_data.time;
                 }
-                Some(mut fut_ob_data) = self.rx_future_orderbook.recv() => {
-                    if let Some(price) = self.fut_price {
-                        self.fut_feature.obi.0 = fut_ob_data.orderbook_imbalance(price, 0.05);
-                        self.fut_feature.obi.1 = fut_ob_data.orderbook_imbalance(price, 0.10);
+                Some(mut fut_ob_data) = self.rx_orderbook.recv() => {
+                    if let Some(price) = self.price {
+                        self.feature.time = fut_ob_data.time;
+                        self.feature.obi.0 = fut_ob_data.orderbook_imbalance(price, 0.05);
+                        self.feature.obi.1 = fut_ob_data.orderbook_imbalance(price, 0.10);
+                        self.feature.price = price;
 
-                        // TODO: This data can be dumped to a database
-                        info!(
-                            "Future || Price: {:.4} | OBI 5%: {:.4} | OBI 10%: {:.4} | Aggressiveness: {:.4} | Time: {}",
-                            price, self.fut_feature.obi.0, self.fut_feature.obi.1, self.fut_feature.aggressiveness, self.latest_update_time
-                        );
+                        // Send the feature to the database
+                        self.tx_feature.send(self.feature.clone()).await.unwrap();
 
                         self.latest_update_time = fut_ob_data.time;
-                    }
-                }
-                Some(spot_mkt_data) = self.rx_spot_market.recv() => {
-                    self.spot_price = Some(spot_mkt_data.price);
-
-                    match spot_mkt_data.buyer_market_maker {
-                        true => self.spot_feature.maker_quantity += spot_mkt_data.quantity,
-                        false => self.spot_feature.taker_quantity += spot_mkt_data.quantity,
-                    }
-
-                    if self.spot_feature.aggressive_measure_begin == 0 {
-                        // Initilize the aggressive measure
-                        self.spot_feature.aggressive_measure_begin = spot_mkt_data.time;
-                        self.spot_feature.aggressive_measure_next = spot_mkt_data.time + 500; // Add 5 seconds (5000ms)
-                    } else if spot_mkt_data.time > self.spot_feature.aggressive_measure_next {
-                        self.spot_feature.aggressiveness = self.spot_feature.maker_quantity / (self.spot_feature.taker_quantity + self.spot_feature.maker_quantity);
-
-                        self.spot_feature.aggressive_measure_begin = spot_mkt_data.time;
-                        self.spot_feature.aggressive_measure_next = spot_mkt_data.time + 500; // Add 5 seconds (5000ms)
-
-                        // Re initialize the feature.maker_quantity and feature.taker_quantity
-                        self.spot_feature.maker_quantity = 0f32;
-                        self.spot_feature.taker_quantity = 0f32;
-                    }
-
-                    self.latest_update_time = spot_mkt_data.time;
-                }
-                Some(mut spot_ob_data) = self.rx_spot_orderbook.recv() => {
-                    if let Some(price) = self.spot_price {
-                        self.spot_feature.obi.0 = spot_ob_data.orderbook_imbalance(price, 0.05);
-                        self.spot_feature.obi.1 = spot_ob_data.orderbook_imbalance(price, 0.10);
-
-                        // TODO: This data can be dumped to a database
-                        info!(
-                            "Spot   || Price: {:.4} | OBI 5%: {:.4} | OBI 10%: {:.4} | Aggressiveness: {:.4} | Time: {}",
-                            price, self.spot_feature.obi.0, self.spot_feature.obi.1, self.spot_feature.aggressiveness, self.latest_update_time
-                        );
-
-                        self.latest_update_time = spot_ob_data.time;
                     }
                 }
             }
