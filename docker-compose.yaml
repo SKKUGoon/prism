@@ -1,0 +1,8 @@
+services:
+  prism:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - RUST_LOG=info
+    restart: unless-stopped
