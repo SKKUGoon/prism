@@ -14,4 +14,4 @@ serde = { version = "1.0.216", features = ["derive"] }
 serde_json = "1.0.133"
 clap = "4.5.23"
 log = "0.4.22"
-env_logger = { version = "0.11.6", default-features = false, features = ["dep:anstream"] }
+env_logger = { version = "0.11.6", default-features = false, features = ["anstream"] }
