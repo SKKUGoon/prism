@@ -19,13 +19,17 @@ pub struct PrismaEngine {
 pub struct PrismaFeature {
     pub time: u64,
     pub source: String,
+
     pub price: f32,
     pub aggressive_measure_begin: u64,
     pub aggressive_measure_next: u64,
+
     pub maker_quantity: f32,
     pub taker_quantity: f32,
     pub aggressiveness: f32,
-    pub obi: (f32, f32, f32, f32),
+    pub obi: f32,
+    pub ofi: f32,
+    pub obi_range: (f32, f32, f32, f32),
 }
 
 #[allow(dead_code)]
@@ -56,7 +60,9 @@ impl PrismaEngine {
                 maker_quantity: 0f32,
                 taker_quantity: 0f32,
                 aggressiveness: 0.0,
-                obi: (0.0, 0.0, 0.0, 0.0),
+                obi: 0.0,
+                ofi: 0.0,
+                obi_range: (0.0, 0.0, 0.0, 0.0),
             },
         }
     }
@@ -96,13 +102,17 @@ impl PrismaEngine {
                 Some(mut fut_ob_data) = self.rx_orderbook.recv() => {
                     if let Some(price) = self.price {
                         self.feature.time = fut_ob_data.time;
-                        self.feature.obi.0 = fut_ob_data.orderbook_imbalance(price, 0.01);
-                        self.feature.obi.1 = fut_ob_data.orderbook_imbalance(price, 0.02);
-                        self.feature.obi.2 = fut_ob_data.orderbook_imbalance(price, 0.05);
-                        self.feature.obi.3 = fut_ob_data.orderbook_imbalance(price, 0.10);
+
+                        self.feature.ofi = fut_ob_data.orderflow_imbalance();
+                        self.feature.obi = fut_ob_data.orderbook_imbalance();
+                        fut_ob_data.update_best_bid_ask(); // Update after calculating flow imbalance
+
+                        self.feature.obi_range.0 = fut_ob_data.orderbook_imbalance_slack(price, 0.01);
+                        self.feature.obi_range.1 = fut_ob_data.orderbook_imbalance_slack(price, 0.02);
+                        self.feature.obi_range.2 = fut_ob_data.orderbook_imbalance_slack(price, 0.05);
+                        self.feature.obi_range.3 = fut_ob_data.orderbook_imbalance_slack(price, 0.10);
                         self.feature.price = price;
 
-                        // Send the feature to the database
                         self.tx_feature.send(self.feature.clone()).await.unwrap();
 
                         self.latest_update_time = fut_ob_data.time;
