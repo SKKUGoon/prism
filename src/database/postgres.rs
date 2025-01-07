@@ -29,7 +29,7 @@ pub async fn batch_insert_into_timescale(
         return Ok(());
     }
 
-    let base_query = String::from("INSERT INTO binance.features4 (time, source, price, maker_quantity, taker_quantity, aggressive, ofi, obi, obi_001, obi_002, obi_005, obi_010) VALUES ");
+    let base_query = String::from("INSERT INTO binance.features (time, source, price, maker_quantity, taker_quantity, aggressive, ofi, obi, obi_001, obi_002, obi_005, obi_010) VALUES ");
     let mut placeholders: Vec<String> = Vec::new();
     let mut values: Vec<Box<dyn tokio_postgres::types::ToSql + Sync + Send>> = Vec::new();
 
