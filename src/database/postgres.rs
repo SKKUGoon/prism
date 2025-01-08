@@ -8,7 +8,7 @@ use crate::prism::engine::PrismaFeature;
 #[allow(dead_code)]
 pub async fn connect_to_timescale() -> Result<Client, Box<dyn std::error::Error>> {
     let connection_str =
-        "host=localhost port=10501 user=postgres password=postgres dbname=postgres";
+        "host=host.docker.internal port=10501 user=postgres password=postgres dbname=postgres";
 
     let (client, connection) = tokio_postgres::connect(connection_str, NoTls).await?;
 
