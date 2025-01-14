@@ -74,7 +74,7 @@ impl Tib {
 
         self.imb += tick_imbalance;
 
-        if self.imb.abs() > self.thres {
+        if self.imb.abs() >= self.thres {
             let complete_bar = Tib {
                 id: self.id.clone(),
                 ts: self.ts,
@@ -105,6 +105,5 @@ impl Tib {
         self.ps = None;
         self.pe = None;
         self.imb = 0.0;
-        self.tick_changes.clear();
     }
 }
