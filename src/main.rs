@@ -7,9 +7,10 @@ use crate::data::stream::StreamHandler;
 use data::market::binance_aggtrade_future::BinanceFutureAggTradeStreamHandler;
 use data::market::binance_aggtrade_spot::BinanceSpotAggTradeStreamHandler;
 use data::orderbook::binance_orderbook_spot::BinanceSpotOrderbookStreamHandler;
+use database::postgres::timescale_batch_writer;
 use log::{error, info, warn};
 use prism::engine::{PrismFeatureEngine, PrismaSource};
-use prism::executor::{PrismTrade, PrismTradeConfig};
+use prism::executor::{Prism, PrismConfig};
 use tokio::{signal, sync::mpsc};
 
 mod data;
@@ -49,6 +50,9 @@ async fn main() {
     let (tx_fut_exec, rx_fut_exec) = mpsc::channel(999);
     let (tx_spt_exec, rx_spt_exec) = mpsc::channel(999);
 
+    let (tx_fut_db, rx_fut_db) = mpsc::channel(999);
+    let (tx_spt_db, rx_spt_db) = mpsc::channel(999);
+
     /* Feature Creation Engine Start */
     let mut fut_engine = PrismFeatureEngine::new(
         PrismaSource::Future,
@@ -64,23 +68,30 @@ async fn main() {
     );
 
     /* Trade Engine Start */
-    let mut trade_engine = PrismTrade::new(PrismTradeConfig::default(), rx_fut_exec, rx_spt_exec);
+    let mut trade_engine = Prism::new(
+        PrismConfig::default(),
+        rx_fut_exec,
+        rx_spt_exec,
+        tx_fut_db,
+        tx_spt_db,
+    );
 
     tokio::spawn(async move { fut_engine.work().await });
     tokio::spawn(async move { spt_engine.work().await });
     tokio::spawn(async move { trade_engine.work().await });
-    // /* Timescale Insertion */
-    // tokio::spawn(async move {
-    //     if let Err(e) = timescale_batch_writer("binance", "features_future", rx_fut_exec).await {
-    //         error!("Timescale batch writer error: {}", e);
-    //     }
-    // });
 
-    // tokio::spawn(async move {
-    //     if let Err(e) = timescale_batch_writer("biannce", "feature_spot", rx_spt_exec).await {
-    //         error!("Timescale batch writer error: {}", e);
-    //     }
-    // });
+    /* Timescale Insertion */
+    tokio::spawn(async move {
+        if let Err(e) = timescale_batch_writer("binance", "features_future", rx_fut_db).await {
+            error!("Timescale batch writer error: {}", e);
+        }
+    });
+
+    tokio::spawn(async move {
+        if let Err(e) = timescale_batch_writer("binance", "feature_spot", rx_spt_db).await {
+            error!("Timescale batch writer error: {}", e);
+        }
+    });
 
     /* Price Feed */
     // Future
