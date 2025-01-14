@@ -76,17 +76,13 @@ async fn main() {
     );
 
     /* Trade Engine Start */
-    let mut trade_engine = Prism::new(
-        PrismConfig::default(),
-        rx_fut_exec,
-        rx_spt_exec,
-        tx_fut_db,
-        tx_spt_db,
-    );
+    let mut core_config = PrismConfig::default();
+    core_config.enable_data_dump();
+    let mut core = Prism::new(core_config, rx_fut_exec, rx_spt_exec, tx_fut_db, tx_spt_db);
 
     tokio::spawn(async move { fut_engine.work().await });
     tokio::spawn(async move { spt_engine.work().await });
-    tokio::spawn(async move { trade_engine.work().await });
+    tokio::spawn(async move { core.work().await });
 
     /* Timescale Insertion */
     tokio::spawn(async move {

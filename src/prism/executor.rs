@@ -24,6 +24,10 @@ impl PrismConfig {
             data_dump: false,
         }
     }
+
+    pub fn enable_data_dump(&mut self) {
+        self.data_dump = true;
+    }
 }
 
 #[derive(Debug)]
