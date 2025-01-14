@@ -1,5 +1,4 @@
 use crate::prism::bar_tick_imbalance::Tib;
-use log::info;
 use std::collections::VecDeque;
 
 #[derive(Debug)]
@@ -30,6 +29,5 @@ impl Bar {
             }
         }
         self.tib_queue.push_back(bar.clone());
-        info!("Updated bar: {:?}, {}", bar, self.tib_queue.len());
     }
 }

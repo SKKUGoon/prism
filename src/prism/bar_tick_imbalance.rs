@@ -1,3 +1,5 @@
+use log::info;
+
 use crate::data::market::binance_aggtrade_future::MarketData;
 use std::collections::VecDeque;
 
@@ -59,6 +61,7 @@ impl Tib {
                 / self.vol_window as f32;
             let std_dev = vol.sqrt();
             self.thres = self.base_thres * std_dev;
+            info!("Threshold Updated to: {}", self.thres);
         }
 
         let tick_imbalance = if price_change > 0.0 {

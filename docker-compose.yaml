@@ -8,7 +8,7 @@ services:
     environment:
       - RUST_LOG=info
       - SYMBOLS=xrpusdt
-      - TABLE=feature_xrpusdt
+      - TABLE=features_xrpusdt
     restart: unless-stopped
 
   prism-btc:
@@ -20,7 +20,7 @@ services:
     environment:
       - RUST_LOG=info
       - SYMBOLS=btcusdt
-      - TABLE=feature_btcusdt
+      - TABLE=features_btcusdt
     restart: unless-stopped
 
   prism-bnb:
@@ -32,7 +32,7 @@ services:
     environment:
       - RUST_LOG=info
       - SYMBOLS=bnbusdt
-      - TABLE=feature_bnbusdt
+      - TABLE=features_bnbusdt
     restart: unless-stopped
 
   prism-doge:
@@ -44,7 +44,7 @@ services:
     environment:
       - RUST_LOG=info
       - SYMBOLS=dogeusdt
-      - TABLE=feature_bnbusdt
+      - TABLE=features_bnbusdt
     restart: unless-stopped
 
   prism-sui:
@@ -56,5 +56,5 @@ services:
     environment:
       - RUST_LOG=info
       - SYMBOLS=suiusdt
-      - TABLE=feature_suiusdt
+      - TABLE=features_suiusdt
     restart: unless-stopped
