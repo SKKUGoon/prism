@@ -1,3 +1,5 @@
+use std::env;
+
 use crate::data::orderbook::{
     binance_orderbook_future::BinanceFutureOrderbookStreamHandler, book::Orderbook,
 };
@@ -5,9 +7,9 @@ use crate::data::stream::StreamHandler;
 use data::market::binance_aggtrade_future::BinanceFutureAggTradeStreamHandler;
 use data::market::binance_aggtrade_spot::BinanceSpotAggTradeStreamHandler;
 use data::orderbook::binance_orderbook_spot::BinanceSpotOrderbookStreamHandler;
-use database::postgres::timescale_batch_writer;
 use log::{error, info, warn};
-use prism::engine::PrismaEngine;
+use prism::engine::{PrismFeatureEngine, PrismaSource};
+use prism::executor::{PrismTrade, PrismTradeConfig};
 use tokio::{signal, sync::mpsc};
 
 mod data;
@@ -18,52 +20,72 @@ mod trade;
 #[tokio::main]
 async fn main() {
     env_logger::init();
-    let test_symbol = String::from("xrpusdt");
-    let (tx_future_orderbook_data, rx_future_orderbook_data) = mpsc::channel(9999);
-    let (tx_future_orderbook_prism, rx_future_orderbook_prism) = mpsc::channel(9999);
-    let (tx_spot_orderbook_data, rx_spot_orderbook_data) = mpsc::channel(9999);
-    let (tx_spot_orderbook_prism, rx_spot_orderbook_prism) = mpsc::channel(9999);
+    let symbol = env::var("SYMBOLS").unwrap_or_else(|_| "xrpusdt".to_string());
 
-    let (tx_future_aggtrade_data, rx_future_aggtrade_prism) = mpsc::channel(9999);
-    let (tx_spot_aggtrade_data, rx_spot_aggtrade_prism) = mpsc::channel(9999);
+    /*
+    Create Channels
 
-    let (tx_future_prisma_feature, rx_future_prisma_feature) = mpsc::channel(2000);
-    let (tx_spot_prisma_feature, rx_spot_prisma_feature) = mpsc::channel(2000);
+    (1) Data flows like so:
+         Websocket -> Data -> Engine -> Executor (or database) -> Trade order
+    (2) Data from websocket to engine.
+         The channel name will be: tx(rx)_(fut/spt)_(ob/agg)_data
+         a. (ob)Orderbook
+         b. (agg)Aggtrade - AggTrade does not need to be processed by class. So `rx` part goes to straight to engine
+    (3) Data engineering inside engine. Send to Executor (or database)
+         The channel name will be: tx(rx)_(fut/spt)_exec
+    */
 
-    /* Engine Start */
-    let mut future_engine = PrismaEngine::new(
-        "future",
-        rx_future_orderbook_prism,
-        rx_future_aggtrade_prism,
-        tx_future_prisma_feature,
+    // Data -> Websocket -> Engine
+    let (tx_fut_ob_data, rx_fut_ob_data) = mpsc::channel(999);
+    let (tx_fut_ob_prism, rx_fut_ob_prism) = mpsc::channel(999);
+
+    let (tx_spt_ob_data, rx_spt_ob_data) = mpsc::channel(999);
+    let (tx_spt_ob_prism, rx_spt_ob_prism) = mpsc::channel(999);
+
+    let (tx_fut_agg_data, rx_fut_agg_prism) = mpsc::channel(999);
+    let (tx_spt_agg_data, rx_spt_agg_prism) = mpsc::channel(999);
+
+    // Engine -> Executor (or database)
+    let (tx_fut_exec, rx_fut_exec) = mpsc::channel(999);
+    let (tx_spt_exec, rx_spt_exec) = mpsc::channel(999);
+
+    /* Feature Creation Engine Start */
+    let mut fut_engine = PrismFeatureEngine::new(
+        PrismaSource::Future,
+        rx_fut_ob_prism,
+        rx_fut_agg_prism,
+        tx_fut_exec,
     );
-    let mut spot_engine = PrismaEngine::new(
-        "spot",
-        rx_spot_orderbook_prism,
-        rx_spot_aggtrade_prism,
-        tx_spot_prisma_feature,
+    let mut spt_engine = PrismFeatureEngine::new(
+        PrismaSource::Spot,
+        rx_spt_ob_prism,
+        rx_spt_agg_prism,
+        tx_spt_exec,
     );
 
-    tokio::spawn(async move { future_engine.work().await });
-    tokio::spawn(async move { spot_engine.work().await });
+    /* Trade Engine Start */
+    let mut trade_engine = PrismTrade::new(PrismTradeConfig::default(), rx_fut_exec, rx_spt_exec);
 
-    /* Timescale Insertion */
-    tokio::spawn(async move {
-        if let Err(e) = timescale_batch_writer(rx_future_prisma_feature).await {
-            error!("Timescale batch writer error: {}", e);
-        }
-    });
+    tokio::spawn(async move { fut_engine.work().await });
+    tokio::spawn(async move { spt_engine.work().await });
+    tokio::spawn(async move { trade_engine.work().await });
+    // /* Timescale Insertion */
+    // tokio::spawn(async move {
+    //     if let Err(e) = timescale_batch_writer("binance", "features_future", rx_fut_exec).await {
+    //         error!("Timescale batch writer error: {}", e);
+    //     }
+    // });
 
-    tokio::spawn(async move {
-        if let Err(e) = timescale_batch_writer(rx_spot_prisma_feature).await {
-            error!("Timescale batch writer error: {}", e);
-        }
-    });
+    // tokio::spawn(async move {
+    //     if let Err(e) = timescale_batch_writer("biannce", "feature_spot", rx_spt_exec).await {
+    //         error!("Timescale batch writer error: {}", e);
+    //     }
+    // });
 
     /* Price Feed */
     // Future
     let binance_future_aggtrade =
-        BinanceFutureAggTradeStreamHandler::new(test_symbol.clone(), tx_future_aggtrade_data);
+        BinanceFutureAggTradeStreamHandler::new(symbol.clone(), tx_fut_agg_data);
 
     tokio::spawn(async move {
         loop {
@@ -80,7 +102,7 @@ async fn main() {
 
     // Spot
     let binance_spot_aggtrade =
-        BinanceSpotAggTradeStreamHandler::new(test_symbol.clone(), tx_spot_aggtrade_data);
+        BinanceSpotAggTradeStreamHandler::new(symbol.clone(), tx_spt_agg_data);
 
     tokio::spawn(async move {
         loop {
@@ -97,11 +119,9 @@ async fn main() {
 
     /* Orderbook */
     // Future
-    let mut future_book = Orderbook::new(rx_future_orderbook_data, tx_future_orderbook_prism);
-    let binance_future_orderbook = BinanceFutureOrderbookStreamHandler::new(
-        test_symbol.clone(),
-        tx_future_orderbook_data.clone(),
-    );
+    let mut future_book = Orderbook::new(rx_fut_ob_data, tx_fut_ob_prism);
+    let binance_future_orderbook =
+        BinanceFutureOrderbookStreamHandler::new(symbol.clone(), tx_fut_ob_data.clone());
 
     tokio::spawn(async move {
         loop {
@@ -119,9 +139,9 @@ async fn main() {
     tokio::spawn(async move { future_book.listen().await });
 
     // Spot
-    let mut spot_book = Orderbook::new(rx_spot_orderbook_data, tx_spot_orderbook_prism);
+    let mut spot_book = Orderbook::new(rx_spt_ob_data, tx_spt_ob_prism);
     let binance_spot_orderbook =
-        BinanceSpotOrderbookStreamHandler::new(test_symbol.clone(), tx_spot_orderbook_data.clone());
+        BinanceSpotOrderbookStreamHandler::new(symbol.clone(), tx_spt_ob_data.clone());
 
     tokio::spawn(async move {
         loop {

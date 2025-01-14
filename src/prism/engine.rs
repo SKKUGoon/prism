@@ -1,68 +1,96 @@
+use core::f32;
+use log::error;
 use tokio::sync::mpsc::{Receiver, Sender};
 
 use crate::data::market::binance_aggtrade_future::MarketData;
 use crate::data::orderbook::book::OrderbookData;
+use crate::prism::bar_tick_imbalance::Tib;
 
-pub struct PrismaEngine {
+pub struct PrismFeatureEngine {
+    // Receive data from
     rx_orderbook: Receiver<OrderbookData>,
     rx_market: Receiver<MarketData>,
+
+    // Send data to Executor
     tx_feature: Sender<PrismaFeature>,
-    price: Option<f32>,
 
-    latest_update_time: u64,
-
-    // Trade indicators
+    // Feature + Feature Temporary
     feature: PrismaFeature,
+    temporary: PrismaFeature,
 }
 
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct PrismaFeature {
-    pub time: u64,
+    pub feature_time: u64,
     pub source: String,
 
     pub price: f32,
-    pub aggressive_measure_begin: u64,
-    pub aggressive_measure_next: u64,
-
     pub maker_quantity: f32,
     pub taker_quantity: f32,
-    pub aggressiveness: f32,
-    pub obi: f32,
-    pub ofi: f32,
-    pub obi_range: (f32, f32, f32, f32),
+
+    // Time Bar
+    pub obi: f32,                        // Orderbook imbalance
+    pub obi_range: (f32, f32, f32, f32), // Ranged Orderbook imbalance
+
+    // Tick Imbalance Bar
+    // Bars will be generated from the `temporary` attributes.
+    // When bars are generated, they will be moved to the `feature` attributes.
+    pub tib: Tib,
+}
+
+#[derive(Debug, Clone)]
+pub enum PrismaSource {
+    Future,
+    Spot,
+}
+
+impl PrismaSource {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            PrismaSource::Future => "f",
+            PrismaSource::Spot => "s",
+        }
+    }
 }
 
 #[allow(dead_code)]
-impl PrismaEngine {
+impl PrismFeatureEngine {
     pub fn new(
-        source: &str,
+        source: PrismaSource,
         rx_orderbook: Receiver<OrderbookData>,
         rx_market: Receiver<MarketData>,
         tx_feature: Sender<PrismaFeature>,
     ) -> Self {
         // rx_orderbook, rx_market: Collects data from the orderbook and market stream
         // tx_feature: Sends the engineered features to the database / trading executor
+        const TICK_IMBALANCE_THRESHOLD: f32 = 10.0;
+
         Self {
+            // Attach channels
             rx_orderbook,
             rx_market,
             tx_feature,
 
-            price: None,
-
-            latest_update_time: 0,
-
             feature: PrismaFeature {
-                time: 0,
-                source: source.to_string(),
-                price: 0.0,
-                aggressive_measure_begin: 0,
-                aggressive_measure_next: 0,
-                maker_quantity: 0f32,
-                taker_quantity: 0f32,
-                aggressiveness: 0.0,
-                obi: 0.0,
-                ofi: 0.0,
+                feature_time: u64::MAX,
+                source: source.as_str().to_string(),
+                price: -f32::INFINITY,
+                maker_quantity: 0.0,
+                taker_quantity: 0.0,
+                tib: Tib::new(TICK_IMBALANCE_THRESHOLD), // Initialize single tick imbalance bar
+                obi: -f32::INFINITY,                     // Should be inside -1 < obi < 1
                 obi_range: (0.0, 0.0, 0.0, 0.0),
+            },
+            temporary: PrismaFeature {
+                feature_time: u64::MAX,              // Not used in temporary
+                source: source.as_str().to_string(), // Not used in temporary
+                price: -f32::INFINITY,               // Not used in temporary
+                maker_quantity: 0.0,                 // Not used in temporary
+                taker_quantity: 0.0,                 // Not used in temporary
+                tib: Tib::new(TICK_IMBALANCE_THRESHOLD),
+                obi: -f32::INFINITY,             // Not used in temporary
+                obi_range: (0.0, 0.0, 0.0, 0.0), // Not used in temporary
             },
         }
     }
@@ -71,51 +99,48 @@ impl PrismaEngine {
         loop {
             tokio::select! {
                 Some(fut_mkt_data) = self.rx_market.recv() => {
-                    self.price = Some(fut_mkt_data.price);
+                    // Update price
                     self.feature.price = fut_mkt_data.price;
-                    self.feature.time = fut_mkt_data.time;
 
+                    // Update maker/taker quantity
                     match fut_mkt_data.buyer_market_maker {
                         true => self.feature.maker_quantity += fut_mkt_data.quantity,
                         false => self.feature.taker_quantity += fut_mkt_data.quantity,
                     }
 
-                    if self.feature.aggressive_measure_begin == 0 {
-                        // Initilize the aggressive measure
-                        self.feature.aggressive_measure_begin = fut_mkt_data.time;
-                        self.feature.aggressive_measure_next = fut_mkt_data.time + 500; // Add 5 seconds (5000ms)
-                    } else if fut_mkt_data.time > self.feature.aggressive_measure_next {
-                        self.feature.aggressiveness = self.feature.maker_quantity / (self.feature.taker_quantity + self.feature.maker_quantity);
-
-                        self.feature.aggressive_measure_begin = fut_mkt_data.time;
-                        self.feature.aggressive_measure_next = fut_mkt_data.time + 500; // Add 5 seconds (5000ms)
-
-                        // Re initialize the feature.maker_quantity and feature.taker_quantity
-                        self.feature.maker_quantity = 0f32;
-                        self.feature.taker_quantity = 0f32;
+                    if let Some(tb) = self.temporary.tib.update(&fut_mkt_data) {
+                        // Update tick imbalance bar
+                        self.feature.tib = tb;
+                        self.temporary.tib.reset();
                     }
 
-                    // Send the feature to the database
-                    self.tx_feature.send(self.feature.clone()).await.unwrap();
-                    self.latest_update_time = fut_mkt_data.time;
+                    // Update feature time
+                    self.feature.feature_time = fut_mkt_data.time;
+
+                    // Send feature to executor
+                    if self.tx_feature.send(self.feature.clone()).await.is_err() {
+                        error!("Failed to send feature to executor");
+                    }
+
+                    // Reset maker/taker quantity
+                    self.feature.maker_quantity = 0.0;
+                    self.feature.taker_quantity = 0.0;
                 }
                 Some(mut fut_ob_data) = self.rx_orderbook.recv() => {
-                    if let Some(price) = self.price {
-                        self.feature.time = fut_ob_data.time;
+                    if self.feature.price > 0.0 {
+                        self.feature.feature_time = fut_ob_data.time;
 
-                        self.feature.ofi = fut_ob_data.orderflow_imbalance();
                         self.feature.obi = fut_ob_data.orderbook_imbalance();
                         fut_ob_data.update_best_bid_ask(); // Update after calculating flow imbalance
 
-                        self.feature.obi_range.0 = fut_ob_data.orderbook_imbalance_slack(price, 0.01);
-                        self.feature.obi_range.1 = fut_ob_data.orderbook_imbalance_slack(price, 0.02);
-                        self.feature.obi_range.2 = fut_ob_data.orderbook_imbalance_slack(price, 0.05);
-                        self.feature.obi_range.3 = fut_ob_data.orderbook_imbalance_slack(price, 0.10);
-                        self.feature.price = price;
+                        self.feature.obi_range.0 = fut_ob_data.orderbook_imbalance_slack(self.feature.price, 0.005);
+                        self.feature.obi_range.1 = fut_ob_data.orderbook_imbalance_slack(self.feature.price, 0.01);
+                        self.feature.obi_range.2 = fut_ob_data.orderbook_imbalance_slack(self.feature.price, 0.02);
+                        self.feature.obi_range.3 = fut_ob_data.orderbook_imbalance_slack(self.feature.price, 0.5);
 
-                        self.tx_feature.send(self.feature.clone()).await.unwrap();
-
-                        self.latest_update_time = fut_ob_data.time;
+                        if self.tx_feature.send(self.feature.clone()).await.is_err() {
+                            error!("Failed to send feature to executor");
+                        }
                     }
                 }
             }

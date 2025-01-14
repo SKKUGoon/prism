@@ -97,6 +97,7 @@ impl Orderbook {
     }
 }
 
+#[allow(dead_code)]
 impl OrderbookData {
     pub fn orderflow_imbalance(&mut self) -> f32 {
         let best_bid = self

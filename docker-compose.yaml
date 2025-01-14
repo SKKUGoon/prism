@@ -1,5 +1,5 @@
 services:
-  prism:
+  prism-xrp:
     build:
       context: .
       dockerfile: Dockerfile
@@ -7,4 +7,30 @@ services:
       - "host.docker.internal:host-gateway"
     environment:
       - RUST_LOG=info
+      - SYMBOLS=xrpusdt
+      - TABLE=feature_xrpusdt
+    restart: unless-stopped
+
+  prism-btc:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      - RUST_LOG=info
+      - SYMBOLS=btcusdt
+      - TABLE=feature_btcusdt
+    restart: unless-stopped
+
+  prism-bnb:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      - RUST_LOG=info
+      - SYMBOLS=bnbusdt
+      - TABLE=feature_bnbusdt
     restart: unless-stopped

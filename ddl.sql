@@ -15,3 +15,14 @@ create table binance.features (
 
 select create_hypertable('binance.features', 'time');
 SELECT add_retention_policy('binance.features', INTERVAL '3 days');
+
+create table binance.features2 (
+    time TIMESTAMP not null,
+    price FLOAT4 not null,
+    tib_ts TIMESTAMP not null,
+    tib_imb FLOAT4 not null,
+    tib_ps FLOAT4 not null,
+    tib_pe FLOAT4 not null,
+    tib_imb_range FLOAT4 not null,
+    
+)
