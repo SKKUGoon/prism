@@ -78,8 +78,8 @@ impl PrismFeatureEngine {
                 price: -f32::INFINITY,
                 maker_quantity: 0.0,
                 taker_quantity: 0.0,
-                tib: Tib::new(TICK_IMBALANCE_THRESHOLD), // Initialize single tick imbalance bar
-                obi: -f32::INFINITY,                     // Should be inside -1 < obi < 1
+                tib: Tib::new(TICK_IMBALANCE_THRESHOLD, 500), // Initialize single tick imbalance bar
+                obi: -f32::INFINITY,                          // Should be inside -1 < obi < 1
                 obi_range: (0.0, 0.0, 0.0, 0.0),
             },
             temporary: PrismaFeature {
@@ -88,7 +88,7 @@ impl PrismFeatureEngine {
                 price: -f32::INFINITY,               // Not used in temporary
                 maker_quantity: 0.0,                 // Not used in temporary
                 taker_quantity: 0.0,                 // Not used in temporary
-                tib: Tib::new(TICK_IMBALANCE_THRESHOLD),
+                tib: Tib::new(TICK_IMBALANCE_THRESHOLD, 500),
                 obi: -f32::INFINITY,             // Not used in temporary
                 obi_range: (0.0, 0.0, 0.0, 0.0), // Not used in temporary
             },
