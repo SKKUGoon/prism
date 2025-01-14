@@ -22,6 +22,14 @@ mod trade;
 async fn main() {
     env_logger::init();
     let symbol = env::var("SYMBOLS").unwrap_or_else(|_| "xrpusdt".to_string());
+    let table_fut = format!(
+        "{}_future",
+        env::var("TABLE").unwrap_or_else(|_| "feature_xrpusdt".to_string())
+    );
+    let table_spt = format!(
+        "{}_spot",
+        env::var("TABLE").unwrap_or_else(|_| "feature_xrpusdt".to_string())
+    );
 
     /*
     Create Channels
@@ -82,13 +90,13 @@ async fn main() {
 
     /* Timescale Insertion */
     tokio::spawn(async move {
-        if let Err(e) = timescale_batch_writer("binance", "features_future", rx_fut_db).await {
+        if let Err(e) = timescale_batch_writer("binance", &table_fut, rx_fut_db).await {
             error!("Timescale batch writer error: {}", e);
         }
     });
 
     tokio::spawn(async move {
-        if let Err(e) = timescale_batch_writer("binance", "feature_spot", rx_spt_db).await {
+        if let Err(e) = timescale_batch_writer("binance", &table_spt, rx_spt_db).await {
             error!("Timescale batch writer error: {}", e);
         }
     });

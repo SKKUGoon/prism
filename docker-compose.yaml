@@ -34,3 +34,27 @@ services:
       - SYMBOLS=bnbusdt
       - TABLE=feature_bnbusdt
     restart: unless-stopped
+
+  prism-doge:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      - RUST_LOG=info
+      - SYMBOLS=dogeusdt
+      - TABLE=feature_bnbusdt
+    restart: unless-stopped
+
+  prism-sui:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      - RUST_LOG=info
+      - SYMBOLS=suiusdt
+      - TABLE=feature_suiusdt
+    restart: unless-stopped
