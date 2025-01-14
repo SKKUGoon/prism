@@ -44,7 +44,7 @@ services:
     environment:
       - RUST_LOG=info
       - SYMBOLS=dogeusdt
-      - TABLE=features_bnbusdt
+      - TABLE=features_dogeusdt
     restart: unless-stopped
 
   prism-sui:
