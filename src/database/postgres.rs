@@ -57,7 +57,7 @@ async fn batch_insert_into_timescale(
     }
 
     let base_query = format!(
-        "INSERT INTO {}.{} (time, source, price, maker_quantity, taker_quantity, obi, obi_005p, obi_01p, obi_02p, obi_05p, tib_id, tib_imb, tib_ps, tib_pe, vmb_id, vmb_imb, vmm_id, vmm_imb, vmt_id, vmt_imb) VALUES ",
+        "INSERT INTO {}.{} (time, source, price, maker_quantity, taker_quantity, obi, obi_005p, obi_01p, obi_02p, obi_05p, tib_id, tib_imb, vmb_id, vmb_imb, vmm_id, vmm_imb, vmt_id, vmt_imb) VALUES ",
         schema,
         table,
     );
