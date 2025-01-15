@@ -186,7 +186,6 @@ impl PrismFeatureEngine {
                     // Update feature time
                     self.feature.feature_time = fut_mkt_data.time;
 
-                    // Send feature to executor - Send every tick
                     if self.tx_feature.send(self.feature.clone()).await.is_err() {
                         error!("Failed to send feature to executor");
                     }

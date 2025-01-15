@@ -35,7 +35,7 @@ impl TickImbalanceBar {
             imb: 0.0,
             tsize: 0,
 
-            genesis_collect_period: 5000000, // 5 seconds
+            genesis_collect_period: 5000, // 5 seconds
             ewma_factor: 0.9, // Higher factor = more weights to recent data, more responsive to volatile market
             ewma_imb_current: 0.0,
             ewma_t_current: 0.0,
