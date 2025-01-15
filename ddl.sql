@@ -13,11 +13,13 @@ create table binance.features_xrpusdt_future (
     obi_02p FLOAT4 not null,
     obi_05p FLOAT4 not null,
     tib_id text not null,
-    tib_ts TIMESTAMP not null,
-    tib_te TIMESTAMP not null,
-    tib_ps FLOAT4 not null,
-    tib_pe FLOAT4 not null,
-    tib_imb FLOAT4 not null
+    tib_imb FLOAT4 not null,
+    vmb_id text not null,
+    vmb_imb FLOAT4 not null,
+    vmm_id text not null,
+    vmm_imb FLOAT4 not null,
+    vmt_id text not null,
+    vmt_imb FLOAT4 not null
 );
 
 select create_hypertable('binance.features_xrpusdt_future', 'time');
@@ -35,11 +37,13 @@ create table binance.features_xrpusdt_spot (
     obi_02p FLOAT4 not null,
     obi_05p FLOAT4 not null,
     tib_id text not null,
-    tib_ts TIMESTAMP not null,
-    tib_te TIMESTAMP not null,
-    tib_ps FLOAT4 not null,
-    tib_pe FLOAT4 not null,
-    tib_imb FLOAT4 not null
+    tib_imb FLOAT4 not null,
+    vmb_id text not null,
+    vmb_imb FLOAT4 not null,
+    vmm_id text not null,
+    vmm_imb FLOAT4 not null,
+    vmt_id text not null,
+    vmt_imb FLOAT4 not null
 );
 
 select create_hypertable('binance.features_xrpusdt_spot', 'time');
@@ -58,11 +62,13 @@ create table binance.features_btcusdt_future (
     obi_02p FLOAT4 not null,
     obi_05p FLOAT4 not null,
     tib_id text not null,
-    tib_ts TIMESTAMP not null,
-    tib_te TIMESTAMP not null,
-    tib_ps FLOAT4 not null,
-    tib_pe FLOAT4 not null,
-    tib_imb FLOAT4 not null
+    tib_imb FLOAT4 not null,
+    vmb_id text not null,
+    vmb_imb FLOAT4 not null,
+    vmm_id text not null,
+    vmm_imb FLOAT4 not null,
+    vmt_id text not null,
+    vmt_imb FLOAT4 not null
 );
 
 select create_hypertable('binance.features_btcusdt_future', 'time');
@@ -80,11 +86,13 @@ create table binance.features_btcusdt_spot (
     obi_02p FLOAT4 not null,
     obi_05p FLOAT4 not null,
     tib_id text not null,
-    tib_ts TIMESTAMP not null,
-    tib_te TIMESTAMP not null,
-    tib_ps FLOAT4 not null,
-    tib_pe FLOAT4 not null,
-    tib_imb FLOAT4 not null
+    tib_imb FLOAT4 not null,
+    vmb_id text not null,
+    vmb_imb FLOAT4 not null,
+    vmm_id text not null,
+    vmm_imb FLOAT4 not null,
+    vmt_id text not null,
+    vmt_imb FLOAT4 not null
 );
 
 select create_hypertable('binance.features_btcusdt_spot', 'time');
@@ -103,11 +111,13 @@ create table binance.features_bnbusdt_future (
     obi_02p FLOAT4 not null,
     obi_05p FLOAT4 not null,
     tib_id text not null,
-    tib_ts TIMESTAMP not null,
-    tib_te TIMESTAMP not null,
-    tib_ps FLOAT4 not null,
-    tib_pe FLOAT4 not null,
-    tib_imb FLOAT4 not null
+    tib_imb FLOAT4 not null,
+    vmb_id text not null,
+    vmb_imb FLOAT4 not null,
+    vmm_id text not null,
+    vmm_imb FLOAT4 not null,
+    vmt_id text not null,
+    vmt_imb FLOAT4 not null
 );
 
 select create_hypertable('binance.features_bnbusdt_future', 'time');
@@ -125,11 +135,13 @@ create table binance.features_bnbusdt_spot (
     obi_02p FLOAT4 not null,
     obi_05p FLOAT4 not null,
     tib_id text not null,
-    tib_ts TIMESTAMP not null,
-    tib_te TIMESTAMP not null,
-    tib_ps FLOAT4 not null,
-    tib_pe FLOAT4 not null,
-    tib_imb FLOAT4 not null
+    tib_imb FLOAT4 not null,
+    vmb_id text not null,
+    vmb_imb FLOAT4 not null,
+    vmm_id text not null,
+    vmm_imb FLOAT4 not null,
+    vmt_id text not null,
+    vmt_imb FLOAT4 not null
 );
 
 select create_hypertable('binance.features_bnbusdt_spot', 'time');
@@ -148,11 +160,13 @@ create table binance.features_dogeusdt_future (
     obi_02p FLOAT4 not null,
     obi_05p FLOAT4 not null,
     tib_id text not null,
-    tib_ts TIMESTAMP not null,
-    tib_te TIMESTAMP not null,
-    tib_ps FLOAT4 not null,
-    tib_pe FLOAT4 not null,
-    tib_imb FLOAT4 not null
+    tib_imb FLOAT4 not null,
+    vmb_id text not null,
+    vmb_imb FLOAT4 not null,
+    vmm_id text not null,
+    vmm_imb FLOAT4 not null,
+    vmt_id text not null,
+    vmt_imb FLOAT4 not null
 );
 
 select create_hypertable('binance.features_dogeusdt_future', 'time');
@@ -170,11 +184,13 @@ create table binance.features_dogeusdt_spot (
     obi_02p FLOAT4 not null,
     obi_05p FLOAT4 not null,
     tib_id text not null,
-    tib_ts TIMESTAMP not null,
-    tib_te TIMESTAMP not null,
-    tib_ps FLOAT4 not null,
-    tib_pe FLOAT4 not null,
-    tib_imb FLOAT4 not null
+    tib_imb FLOAT4 not null,
+    vmb_id text not null,
+    vmb_imb FLOAT4 not null,
+    vmm_id text not null,
+    vmm_imb FLOAT4 not null,
+    vmt_id text not null,
+    vmt_imb FLOAT4 not null
 );
 
 select create_hypertable('binance.features_dogeusdt_spot', 'time');
@@ -193,11 +209,13 @@ create table binance.features_suiusdt_future (
     obi_02p FLOAT4 not null,
     obi_05p FLOAT4 not null,
     tib_id text not null,
-    tib_ts TIMESTAMP not null,
-    tib_te TIMESTAMP not null,
-    tib_ps FLOAT4 not null,
-    tib_pe FLOAT4 not null,
-    tib_imb FLOAT4 not null
+    tib_imb FLOAT4 not null,
+    vmb_id text not null,
+    vmb_imb FLOAT4 not null,
+    vmm_id text not null,
+    vmm_imb FLOAT4 not null,
+    vmt_id text not null,
+    vmt_imb FLOAT4 not null
 );
 
 select create_hypertable('binance.features_suiusdt_future', 'time');
@@ -215,11 +233,13 @@ create table binance.features_suiusdt_spot (
     obi_02p FLOAT4 not null,
     obi_05p FLOAT4 not null,
     tib_id text not null,
-    tib_ts TIMESTAMP not null,
-    tib_te TIMESTAMP not null,
-    tib_ps FLOAT4 not null,
-    tib_pe FLOAT4 not null,
-    tib_imb FLOAT4 not null
+    tib_imb FLOAT4 not null,
+    vmb_id text not null,
+    vmb_imb FLOAT4 not null,
+    vmm_id text not null,
+    vmm_imb FLOAT4 not null,
+    vmt_id text not null,
+    vmt_imb FLOAT4 not null
 );
 
 select create_hypertable('binance.features_suiusdt_spot', 'time');
