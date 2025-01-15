@@ -4,7 +4,8 @@ use tokio::sync::mpsc::{Receiver, Sender};
 
 use crate::data::market::binance_aggtrade_future::MarketData;
 use crate::data::orderbook::book::OrderbookData;
-use crate::prism::bar_tick_imbalance::Tib;
+use crate::prism::bar_tick_imbalance::TickImbalanceBar;
+use crate::prism::bar_volume_imbalance::{VolumeImbalanceBar, VolumeType};
 
 pub struct PrismFeatureEngine {
     // Receive data from
@@ -16,7 +17,6 @@ pub struct PrismFeatureEngine {
 
     // Feature + Feature Temporary
     feature: PrismaFeature,
-    temporary: PrismaFeature,
 }
 
 #[derive(Debug, Clone)]
@@ -33,10 +33,17 @@ pub struct PrismaFeature {
     pub obi: f32,                        // Orderbook imbalance
     pub obi_range: (f32, f32, f32, f32), // Ranged Orderbook imbalance
 
-    // Tick Imbalance Bar
-    // Bars will be generated from the `temporary` attributes.
-    // When bars are generated, they will be moved to the `feature` attributes.
-    pub tib: Tib,
+    pub tick_imbalance_bar: TickImbalanceBar,
+    tick_imbalance_bar_init: bool,
+
+    pub volume_imbalance_bar_both: VolumeImbalanceBar,
+    volume_imbalance_bar_both_init: bool,
+
+    pub volume_imbalance_bar_maker: VolumeImbalanceBar,
+    volume_imbalance_bar_maker_init: bool,
+
+    pub volume_imbalance_bar_taker: VolumeImbalanceBar,
+    volume_imbalance_bar_taker_init: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -78,20 +85,74 @@ impl PrismFeatureEngine {
                 price: -f32::INFINITY,
                 maker_quantity: 0.0,
                 taker_quantity: 0.0,
-                tib: Tib::new(TICK_IMBALANCE_THRESHOLD, 500), // Initialize single tick imbalance bar
-                obi: -f32::INFINITY,                          // Should be inside -1 < obi < 1
+                obi: -f32::INFINITY, // Should be inside -1 < obi < 1
                 obi_range: (0.0, 0.0, 0.0, 0.0),
+
+                // Information bars
+                tick_imbalance_bar: TickImbalanceBar::new(), // Initialize single tick imbalance bar
+                tick_imbalance_bar_init: false,
+
+                volume_imbalance_bar_both: VolumeImbalanceBar::new(VolumeType::Both),
+                volume_imbalance_bar_both_init: false,
+
+                volume_imbalance_bar_maker: VolumeImbalanceBar::new(VolumeType::Maker),
+                volume_imbalance_bar_maker_init: false,
+
+                volume_imbalance_bar_taker: VolumeImbalanceBar::new(VolumeType::Taker),
+                volume_imbalance_bar_taker_init: false,
             },
-            temporary: PrismaFeature {
-                feature_time: u64::MAX,              // Not used in temporary
-                source: source.as_str().to_string(), // Not used in temporary
-                price: -f32::INFINITY,               // Not used in temporary
-                maker_quantity: 0.0,                 // Not used in temporary
-                taker_quantity: 0.0,                 // Not used in temporary
-                tib: Tib::new(TICK_IMBALANCE_THRESHOLD, 500),
-                obi: -f32::INFINITY,             // Not used in temporary
-                obi_range: (0.0, 0.0, 0.0, 0.0), // Not used in temporary
-            },
+        }
+    }
+
+    fn update_volume_imbalance_bar_both(&mut self, mkt_data: &MarketData) {
+        if self.feature.volume_imbalance_bar_both_init {
+            if let Some(vb) = self.feature.volume_imbalance_bar_both.bar(mkt_data) {
+                self.feature.volume_imbalance_bar_both = vb;
+            }
+        } else if let Some(vb) = self.feature.volume_imbalance_bar_both.genesis_bar(mkt_data) {
+            self.feature.volume_imbalance_bar_both = vb;
+            self.feature.volume_imbalance_bar_both_init = true;
+        }
+    }
+
+    fn update_volume_imbalance_bar_maker(&mut self, mkt_data: &MarketData) {
+        if self.feature.volume_imbalance_bar_maker_init {
+            if let Some(vb) = self.feature.volume_imbalance_bar_maker.bar(mkt_data) {
+                self.feature.volume_imbalance_bar_maker = vb;
+            }
+        } else if let Some(vb) = self
+            .feature
+            .volume_imbalance_bar_maker
+            .genesis_bar(mkt_data)
+        {
+            self.feature.volume_imbalance_bar_maker = vb;
+            self.feature.volume_imbalance_bar_maker_init = true;
+        }
+    }
+
+    fn update_volume_imbalance_bar_taker(&mut self, mkt_data: &MarketData) {
+        if self.feature.volume_imbalance_bar_taker_init {
+            if let Some(vb) = self.feature.volume_imbalance_bar_taker.bar(mkt_data) {
+                self.feature.volume_imbalance_bar_taker = vb;
+            }
+        } else if let Some(vb) = self
+            .feature
+            .volume_imbalance_bar_taker
+            .genesis_bar(mkt_data)
+        {
+            self.feature.volume_imbalance_bar_taker = vb;
+            self.feature.volume_imbalance_bar_taker_init = true;
+        }
+    }
+
+    fn update_tick_imbalance_bar(&mut self, mkt_data: &MarketData) {
+        if self.feature.tick_imbalance_bar_init {
+            if let Some(tb) = self.feature.tick_imbalance_bar.bar(mkt_data) {
+                self.feature.tick_imbalance_bar = tb;
+            }
+        } else if let Some(tb) = self.feature.tick_imbalance_bar.genesis_bar(mkt_data) {
+            self.feature.tick_imbalance_bar = tb;
+            self.feature.tick_imbalance_bar_init = true;
         }
     }
 
@@ -108,16 +169,16 @@ impl PrismFeatureEngine {
                         false => self.feature.taker_quantity += fut_mkt_data.quantity,
                     }
 
-                    if let Some(tb) = self.temporary.tib.update(&fut_mkt_data) {
-                        // Update tick imbalance bar
-                        self.feature.tib = tb;
-                        self.temporary.tib.reset();
-                    }
+                    // Update bars
+                    self.update_volume_imbalance_bar_both(&fut_mkt_data);
+                    self.update_volume_imbalance_bar_maker(&fut_mkt_data);
+                    self.update_volume_imbalance_bar_taker(&fut_mkt_data);
+                    self.update_tick_imbalance_bar(&fut_mkt_data);
 
                     // Update feature time
                     self.feature.feature_time = fut_mkt_data.time;
 
-                    // Send feature to executor
+                    // Send feature to executor - Send every tick
                     if self.tx_feature.send(self.feature.clone()).await.is_err() {
                         error!("Failed to send feature to executor");
                     }

@@ -91,13 +91,21 @@ impl Prism {
         loop {
             tokio::select! {
                 Some(feature) = self.rx_fut_feature.recv() => {
-                    self.fut_bar.update_bar(&feature.tib);
+                    self.fut_bar.update_tick_imbalance_bar(&feature.tick_imbalance_bar);
+                    self.fut_bar.update_volume_imbalance_bar(&feature.volume_imbalance_bar_both);
+                    self.fut_bar.update_volume_imbalance_bar(&feature.volume_imbalance_bar_maker);
+                    self.fut_bar.update_volume_imbalance_bar(&feature.volume_imbalance_bar_taker);
+
                     if self.config.data_dump {
                         self.tx_fut_db.send(feature).await.unwrap();
                     }
                 }
                 Some(feature) = self.rx_spt_feature.recv() => {
-                    self.spt_bar.update_bar(&feature.tib);
+                    self.spt_bar.update_tick_imbalance_bar(&feature.tick_imbalance_bar);
+                    self.spt_bar.update_volume_imbalance_bar(&feature.volume_imbalance_bar_both);
+                    self.spt_bar.update_volume_imbalance_bar(&feature.volume_imbalance_bar_maker);
+                    self.spt_bar.update_volume_imbalance_bar(&feature.volume_imbalance_bar_taker);
+
                     if self.config.data_dump {
                         self.tx_spt_db.send(feature).await.unwrap();
                     }

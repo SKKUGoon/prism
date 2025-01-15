@@ -21,8 +21,8 @@ pub async fn connect_to_timescale() -> Result<Client, Box<dyn std::error::Error>
 }
 
 pub async fn timescale_batch_writer(
-    schema: &str,
-    table: &str,
+    #[allow(unused_variables)] schema: &str,
+    #[allow(unused_variables)] table: &str,
     mut rx: mpsc::Receiver<PrismaFeature>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let client = connect_to_timescale().await?;
@@ -57,7 +57,7 @@ async fn batch_insert_into_timescale(
     }
 
     let base_query = format!(
-        "INSERT INTO {}.{} (time, source, price, maker_quantity, taker_quantity, obi, obi_005p, obi_01p, obi_02p, obi_05p, tib_id, tib_ts, tib_te, tib_ps, tib_pe, tib_imb) VALUES ",
+        "INSERT INTO {}.{} (time, source, price, maker_quantity, taker_quantity, obi, obi_005p, obi_01p, obi_02p, obi_05p, tib_id, tib_imb, tib_ps, tib_pe, vmb_id, vmb_imb, vmm_id, vmm_imb, vmt_id, vmt_imb) VALUES ",
         schema,
         table,
     );
@@ -68,24 +68,27 @@ async fn batch_insert_into_timescale(
     let mut param_index = 1;
     for feature in features {
         placeholders.push(format!(
-            "(to_timestamp(${}::FLOAT8), ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${}, to_timestamp(${}::FLOAT8), to_timestamp(${}::FLOAT8), ${}, ${}, ${})",
-            param_index, // time
-            param_index + 1, // source
-            param_index + 2, // price
-            param_index + 3, // maker_quantity
-            param_index + 4, // taker_quantity
-            param_index + 5, // obi
-            param_index + 6, // obi_005p
-            param_index + 7, // obi_01p
-            param_index + 8, // obi_02p
-            param_index + 9, // obi_05p
-            param_index + 10, // tib_id
-            param_index + 11, // tib_ts
-            param_index + 12, // tib_te
-            param_index + 13, // tib_ps
-            param_index + 14, // tib_pe
-            param_index + 15, // tib_imb
+            "(to_timestamp(${}::FLOAT8), ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${})",
+            param_index,      // time
+            param_index + 1,  // source
+            param_index + 2,  // price
+            param_index + 3,  // maker_quantity
+            param_index + 4,  // taker_quantity
+            param_index + 5,  // obi
+            param_index + 6,  // obi_005p
+            param_index + 7,  // obi_01p
+            param_index + 8,  // obi_02p
+            param_index + 9,  // obi_05p
+            param_index + 10, // tick_imbalance_bar_id (tib_id)
+            param_index + 11, // tick_imbalance_bar_imbalance (tib_imb)
+            param_index + 12, // volume_imbalance_bar_both_id (vmb_id)
+            param_index + 13, // volume_imbalance_bar_both_imbalance (vmb_imb)
+            param_index + 14, // volume_imbalance_bar_maker_id (vmm_id)
+            param_index + 15, // volume_imbalance_bar_maker_imbalance (vmm_imb)
+            param_index + 16, // volume_imbalance_bar_taker_id (vmt_id)
+            param_index + 17, // volume_imbalance_bar_taker_imbalance (vmt_imb)
         ));
+
         values.push(Box::new(feature.feature_time as f64 / 1000.0));
         values.push(Box::new(feature.source.clone()));
         values.push(Box::new(feature.price));
@@ -96,14 +99,16 @@ async fn batch_insert_into_timescale(
         values.push(Box::new(feature.obi_range.1));
         values.push(Box::new(feature.obi_range.2));
         values.push(Box::new(feature.obi_range.3));
-        values.push(Box::new(feature.tib.id.clone()));
-        values.push(Box::new(feature.tib.ts as f64 / 1000.0));
-        values.push(Box::new(feature.tib.te as f64 / 1000.0));
-        values.push(Box::new(feature.tib.ps.unwrap_or(0.0)));
-        values.push(Box::new(feature.tib.pe.unwrap_or(0.0)));
-        values.push(Box::new(feature.tib.imb));
+        values.push(Box::new(feature.tick_imbalance_bar.id.clone()));
+        values.push(Box::new(feature.tick_imbalance_bar.imb));
+        values.push(Box::new(feature.volume_imbalance_bar_both.id.clone()));
+        values.push(Box::new(feature.volume_imbalance_bar_both.imb));
+        values.push(Box::new(feature.volume_imbalance_bar_maker.id.clone()));
+        values.push(Box::new(feature.volume_imbalance_bar_maker.imb));
+        values.push(Box::new(feature.volume_imbalance_bar_taker.id.clone()));
+        values.push(Box::new(feature.volume_imbalance_bar_taker.imb));
 
-        param_index += 16;
+        param_index += 18;
     }
 
     let combined_data = placeholders.join(",");

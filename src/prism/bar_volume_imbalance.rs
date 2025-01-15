@@ -1,8 +1,8 @@
 use crate::data::market::binance_aggtrade_future::MarketData;
 
 #[derive(Debug, Clone)]
-pub struct TickImbalanceBar {
-    // Tick Imbalance Bar
+pub struct VolumeImbalanceBar {
+    // Volume Imbalance Bar
     pub id: String,
     pub ts: Option<u64>, // Time start, Timestamp
     pub te: Option<u64>, // Time end, Timestamp
@@ -12,6 +12,7 @@ pub struct TickImbalanceBar {
     pub pc: Option<f32>, // Price close
     pub imb: f32,        // Tick imbalance
     pub tsize: usize,    // Tick count
+    pub volume_type: VolumeType,
 
     // Constant
     genesis_collect_period: u64, // Cumulative time for creating the first bar
@@ -22,9 +23,15 @@ pub struct TickImbalanceBar {
     ewma_t_current: f32,
 }
 
-#[allow(dead_code)]
-impl TickImbalanceBar {
-    pub fn new() -> Self {
+#[derive(Debug, Clone)]
+pub enum VolumeType {
+    Maker,
+    Taker,
+    Both,
+}
+
+impl VolumeImbalanceBar {
+    pub fn new(volume_type: VolumeType) -> Self {
         Self {
             id: uuid::Uuid::new_v4().to_string(),
             ts: None,
@@ -38,12 +45,13 @@ impl TickImbalanceBar {
 
             genesis_collect_period: 5000000, // 5 seconds
             ewma_factor: 0.9, // Higher factor = more weights to recent data, more responsive to volatile market
+            volume_type,
             ewma_imb_current: 0.0,
             ewma_t_current: 0.0,
         }
     }
 
-    pub fn genesis_bar(&mut self, mkt_data: &MarketData) -> Option<TickImbalanceBar> {
+    pub fn genesis_bar(&mut self, mkt_data: &MarketData) -> Option<VolumeImbalanceBar> {
         match self.ts {
             Some(ts) => {
                 // Retrieve the most recent price from `pe`
@@ -58,7 +66,21 @@ impl TickImbalanceBar {
                     0.0 // Price Stable - Order Match
                 };
 
-                self.imb += tick_imbalance; // Cumulation of tick imbalances
+                match self.volume_type {
+                    VolumeType::Maker => {
+                        if mkt_data.buyer_market_maker {
+                            self.imb += tick_imbalance * mkt_data.quantity;
+                        }
+                    }
+                    VolumeType::Taker => {
+                        if !mkt_data.buyer_market_maker {
+                            self.imb += tick_imbalance * mkt_data.quantity;
+                        }
+                    }
+                    VolumeType::Both => {
+                        self.imb += tick_imbalance * mkt_data.quantity;
+                    }
+                }
                 self.tsize += 1;
 
                 // Update existing bar
@@ -67,16 +89,18 @@ impl TickImbalanceBar {
                 self.ph = Some(self.ph.unwrap().max(mkt_data.price));
                 self.pl = Some(self.pl.unwrap().min(mkt_data.price));
 
-                // Check if the bar is ready to be created
                 if let Some(te) = self.te {
-                    // Genesis bar creation is done after pre-adjusted amount of time
                     if te - ts >= self.genesis_collect_period {
-                        // Create new bar
-                        self.ewma_imb_current = self.imb * self.ewma_factor
-                            + (1.0 - self.ewma_factor) * self.ewma_imb_current; // EWMA_t = lambda * IMB_t + (1 - lambda) * EWMA_t-1
-                        self.ewma_t_current = self.tsize as f32 * self.ewma_factor
-                            + (1.0 - self.ewma_factor) * self.ewma_t_current; // EWMA_t = lambda * t_t + (1 - lambda) * EWMA_t-1
-                        return Some(self.clone());
+                        // Genesis bar creation is done after pre-adjusted amount of time
+                        if te - ts >= self.genesis_collect_period {
+                            // Create new bar
+                            self.ewma_imb_current = self.imb * self.ewma_factor
+                                + (1.0 - self.ewma_factor) * self.ewma_imb_current; // EWMA_t = lambda * IMB_t + (1 - lambda) * EWMA_t-1
+                            self.ewma_t_current = self.tsize as f32 * self.ewma_factor
+                                + (1.0 - self.ewma_factor) * self.ewma_t_current; // EWMA_t = lambda * t_t + (1 - lambda) * EWMA_t-1
+
+                            return Some(self.clone());
+                        }
                     }
                 }
             }
@@ -97,7 +121,7 @@ impl TickImbalanceBar {
         None
     }
 
-    pub fn bar(&mut self, mkt_data: &MarketData) -> Option<TickImbalanceBar> {
+    pub fn bar(&mut self, mkt_data: &MarketData) -> Option<VolumeImbalanceBar> {
         match self.ts {
             Some(_) => {
                 let prev_price = self.pc.unwrap(); // Guaranteed to be Some
@@ -111,7 +135,21 @@ impl TickImbalanceBar {
                     0.0 // Price Stable - Order Match
                 };
 
-                self.imb += tick_imbalance;
+                match self.volume_type {
+                    VolumeType::Maker => {
+                        if mkt_data.buyer_market_maker {
+                            self.imb += tick_imbalance * mkt_data.quantity;
+                        }
+                    }
+                    VolumeType::Taker => {
+                        if !mkt_data.buyer_market_maker {
+                            self.imb += tick_imbalance * mkt_data.quantity;
+                        }
+                    }
+                    VolumeType::Both => {
+                        self.imb += tick_imbalance * mkt_data.quantity;
+                    }
+                }
                 self.tsize += 1;
 
                 // Update existing bar
