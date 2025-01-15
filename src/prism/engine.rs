@@ -108,10 +108,12 @@ impl PrismFeatureEngine {
         if self.feature.volume_imbalance_bar_both_init {
             if let Some(vb) = self.feature.volume_imbalance_bar_both.bar(mkt_data) {
                 self.feature.volume_imbalance_bar_both = vb;
+                self.feature.volume_imbalance_bar_both.reset();
             }
         } else if let Some(vb) = self.feature.volume_imbalance_bar_both.genesis_bar(mkt_data) {
             self.feature.volume_imbalance_bar_both = vb;
             self.feature.volume_imbalance_bar_both_init = true;
+            self.feature.volume_imbalance_bar_both.reset();
         }
     }
 
@@ -119,6 +121,7 @@ impl PrismFeatureEngine {
         if self.feature.volume_imbalance_bar_maker_init {
             if let Some(vb) = self.feature.volume_imbalance_bar_maker.bar(mkt_data) {
                 self.feature.volume_imbalance_bar_maker = vb;
+                self.feature.volume_imbalance_bar_maker.reset();
             }
         } else if let Some(vb) = self
             .feature
@@ -127,6 +130,7 @@ impl PrismFeatureEngine {
         {
             self.feature.volume_imbalance_bar_maker = vb;
             self.feature.volume_imbalance_bar_maker_init = true;
+            self.feature.volume_imbalance_bar_maker.reset();
         }
     }
 
@@ -134,6 +138,7 @@ impl PrismFeatureEngine {
         if self.feature.volume_imbalance_bar_taker_init {
             if let Some(vb) = self.feature.volume_imbalance_bar_taker.bar(mkt_data) {
                 self.feature.volume_imbalance_bar_taker = vb;
+                self.feature.volume_imbalance_bar_taker.reset();
             }
         } else if let Some(vb) = self
             .feature
@@ -142,6 +147,7 @@ impl PrismFeatureEngine {
         {
             self.feature.volume_imbalance_bar_taker = vb;
             self.feature.volume_imbalance_bar_taker_init = true;
+            self.feature.volume_imbalance_bar_taker.reset();
         }
     }
 
@@ -149,10 +155,12 @@ impl PrismFeatureEngine {
         if self.feature.tick_imbalance_bar_init {
             if let Some(tb) = self.feature.tick_imbalance_bar.bar(mkt_data) {
                 self.feature.tick_imbalance_bar = tb;
+                self.feature.tick_imbalance_bar.reset();
             }
         } else if let Some(tb) = self.feature.tick_imbalance_bar.genesis_bar(mkt_data) {
             self.feature.tick_imbalance_bar = tb;
             self.feature.tick_imbalance_bar_init = true;
+            self.feature.tick_imbalance_bar.reset();
         }
     }
 

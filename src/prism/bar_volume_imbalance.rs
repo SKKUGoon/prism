@@ -167,7 +167,6 @@ impl VolumeImbalanceBar {
 
                     // Create new bar
                     let bar = self.clone();
-                    self.reset();
                     return Some(bar);
                 }
             }

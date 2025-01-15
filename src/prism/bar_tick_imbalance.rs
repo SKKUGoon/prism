@@ -22,7 +22,6 @@ pub struct TickImbalanceBar {
     ewma_t_current: f32,
 }
 
-#[allow(dead_code)]
 impl TickImbalanceBar {
     pub fn new() -> Self {
         Self {
@@ -76,6 +75,7 @@ impl TickImbalanceBar {
                             + (1.0 - self.ewma_factor) * self.ewma_imb_current; // EWMA_t = lambda * IMB_t + (1 - lambda) * EWMA_t-1
                         self.ewma_t_current = self.tsize as f32 * self.ewma_factor
                             + (1.0 - self.ewma_factor) * self.ewma_t_current; // EWMA_t = lambda * t_t + (1 - lambda) * EWMA_t-1
+
                         return Some(self.clone());
                     }
                 }
@@ -129,7 +129,7 @@ impl TickImbalanceBar {
 
                     // Create new bar
                     let bar = self.clone();
-                    self.reset();
+
                     return Some(bar);
                 }
             }
