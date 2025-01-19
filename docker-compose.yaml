@@ -11,30 +11,6 @@ services:
       - TABLE=features_xrpusdt
     restart: unless-stopped
 
-  prism-btc:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    environment:
-      - RUST_LOG=info
-      - SYMBOLS=btcusdt
-      - TABLE=features_btcusdt
-    restart: unless-stopped
-
-  prism-bnb:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    environment:
-      - RUST_LOG=info
-      - SYMBOLS=bnbusdt
-      - TABLE=features_bnbusdt
-    restart: unless-stopped
-
   prism-doge:
     build:
       context: .
@@ -45,16 +21,4 @@ services:
       - RUST_LOG=info
       - SYMBOLS=dogeusdt
       - TABLE=features_dogeusdt
-    restart: unless-stopped
-
-  prism-sui:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    environment:
-      - RUST_LOG=info
-      - SYMBOLS=suiusdt
-      - TABLE=features_suiusdt
     restart: unless-stopped
