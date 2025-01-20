@@ -94,7 +94,8 @@ impl VolumeImbalanceBar {
                         // Genesis bar creation is done after pre-adjusted amount of time
                         if te - ts >= self.genesis_collect_period {
                             // Create new bar
-                            self.ewma_imb_current = self.imb * self.ewma_factor
+                            let b_t = self.imb / self.tsize as f32;
+                            self.ewma_imb_current = b_t * self.ewma_factor
                                 + (1.0 - self.ewma_factor) * self.ewma_imb_current; // EWMA_t = lambda * IMB_t + (1 - lambda) * EWMA_t-1
                             self.ewma_t_current = self.tsize as f32 * self.ewma_factor
                                 + (1.0 - self.ewma_factor) * self.ewma_t_current; // EWMA_t = lambda * t_t + (1 - lambda) * EWMA_t-1
@@ -160,8 +161,9 @@ impl VolumeImbalanceBar {
 
                 if self.imb.abs() >= self.ewma_imb_current.abs() * self.ewma_t_current {
                     // Record new EWMA
-                    self.ewma_imb_current = self.imb * self.ewma_factor
-                        + (1.0 - self.ewma_factor) * self.ewma_imb_current; // EWMA_t = lambda * IMB_t + (1 - lambda) * EWMA_t-1
+                    let b_t = self.imb / self.tsize as f32;
+                    self.ewma_imb_current =
+                        b_t * self.ewma_factor + (1.0 - self.ewma_factor) * self.ewma_imb_current; // EWMA_t = lambda * IMB_t + (1 - lambda) * EWMA_t-1
                     self.ewma_t_current = self.tsize as f32 * self.ewma_factor
                         + (1.0 - self.ewma_factor) * self.ewma_t_current; // EWMA_t = lambda * t_t + (1 - lambda) * EWMA_t-1
 
