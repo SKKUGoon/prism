@@ -43,7 +43,7 @@ impl VolumeImbalanceBar {
             imb: 0.0,
             tsize: 0,
 
-            genesis_collect_period: 5000000, // 5 seconds
+            genesis_collect_period: 5000, // 5 seconds
             ewma_factor: 0.9, // Higher factor = more weights to recent data, more responsive to volatile market
             volume_type,
             ewma_imb_current: 0.0,
@@ -91,17 +91,14 @@ impl VolumeImbalanceBar {
 
                 if let Some(te) = self.te {
                     if te - ts >= self.genesis_collect_period {
-                        // Genesis bar creation is done after pre-adjusted amount of time
-                        if te - ts >= self.genesis_collect_period {
-                            // Create new bar
-                            let b_t = self.imb / self.tsize as f32;
-                            self.ewma_imb_current = b_t * self.ewma_factor
-                                + (1.0 - self.ewma_factor) * self.ewma_imb_current; // EWMA_t = lambda * IMB_t + (1 - lambda) * EWMA_t-1
-                            self.ewma_t_current = self.tsize as f32 * self.ewma_factor
-                                + (1.0 - self.ewma_factor) * self.ewma_t_current; // EWMA_t = lambda * t_t + (1 - lambda) * EWMA_t-1
+                        // Create new bar
+                        let b_t = self.imb / self.tsize as f32;
+                        self.ewma_imb_current = b_t * self.ewma_factor
+                            + (1.0 - self.ewma_factor) * self.ewma_imb_current; // EWMA_t = lambda * IMB_t + (1 - lambda) * EWMA_t-1
+                        self.ewma_t_current = self.tsize as f32 * self.ewma_factor
+                            + (1.0 - self.ewma_factor) * self.ewma_t_current; // EWMA_t = lambda * t_t + (1 - lambda) * EWMA_t-1
 
-                            return Some(self.clone());
-                        }
+                        return Some(self.clone());
                     }
                 }
             }
