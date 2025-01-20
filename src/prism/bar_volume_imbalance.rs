@@ -158,7 +158,7 @@ impl VolumeImbalanceBar {
                 self.ph = Some(self.ph.unwrap().max(mkt_data.price));
                 self.pl = Some(self.pl.unwrap().min(mkt_data.price));
 
-                if self.imb.abs() >= self.ewma_imb_current * self.ewma_t_current {
+                if self.imb.abs() >= self.ewma_imb_current.abs() * self.ewma_t_current {
                     // Record new EWMA
                     self.ewma_imb_current = self.imb * self.ewma_factor
                         + (1.0 - self.ewma_factor) * self.ewma_imb_current; // EWMA_t = lambda * IMB_t + (1 - lambda) * EWMA_t-1
