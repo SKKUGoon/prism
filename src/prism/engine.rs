@@ -1,11 +1,10 @@
-use core::f32;
-use log::error;
-use tokio::sync::mpsc::{Receiver, Sender};
-
 use crate::data::market::binance_aggtrade_future::MarketData;
 use crate::data::orderbook::book::OrderbookData;
 use crate::prism::bar_tick_imbalance::TickImbalanceBar;
 use crate::prism::bar_volume_imbalance::{VolumeImbalanceBar, VolumeType};
+use core::f32;
+use log::error;
+use tokio::sync::mpsc::{Receiver, Sender};
 
 pub struct PrismFeatureEngine {
     // Receive data from

@@ -25,6 +25,7 @@ impl PrismConfig {
         }
     }
 
+    #[allow(dead_code)]
     pub fn enable_data_dump(&mut self) {
         self.data_dump = true;
     }
@@ -95,7 +96,6 @@ impl Prism {
                     self.fut_bar.update_volume_imbalance_bar(&feature.volume_imbalance_bar_both);
                     self.fut_bar.update_volume_imbalance_bar(&feature.volume_imbalance_bar_maker);
                     self.fut_bar.update_volume_imbalance_bar(&feature.volume_imbalance_bar_taker);
-
                     if self.config.data_dump {
                         self.tx_fut_db.send(feature).await.unwrap();
                     }
