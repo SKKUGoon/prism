@@ -55,7 +55,6 @@ async fn batch_insert_into_timescale(
     if features.is_empty() {
         return Ok(());
     }
-
     let base_query = format!(
         "INSERT INTO {}.{} (
             time, source, price, maker_quantity, taker_quantity, 
@@ -75,7 +74,7 @@ async fn batch_insert_into_timescale(
     let mut param_index = 1;
     for feature in features {
         placeholders.push(format!(
-            "(to_timestamp(${}::FLOAT8), ${}, ${}, ${}, ${}, ${} ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${})",
+            "(to_timestamp(${}::FLOAT8), ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${})",
             param_index,      // time
             param_index + 1,  // source
             param_index + 2,  // price
