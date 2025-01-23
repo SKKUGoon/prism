@@ -103,7 +103,7 @@ impl DollarImbalanceBar {
                         let threshold = self.ewma_imb_current.abs() * self.ewma_t_current;
 
                         self.historical_threshold.push_back(threshold);
-                        self.imb_thres = threshold;
+                        self.imb_thres = self.threshold_decay(threshold);
 
                         debug!("Genesis Volume Imbalance Bar Created");
                         return Some(self.clone());
