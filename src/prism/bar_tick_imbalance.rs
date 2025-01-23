@@ -142,7 +142,7 @@ impl TickImbalanceBar {
                 self.ph = Some(self.ph.unwrap().max(mkt_data.price));
                 self.pl = Some(self.pl.unwrap().min(mkt_data.price));
 
-                let threshold = self.ewma_imb_current.abs() * self.ewma_t_current;
+                let mut threshold = self.ewma_imb_current.abs() * self.ewma_t_current;
 
                 // Manually set a threshold's limit to prevent the threshold explosion
                 let threshold_max = self
@@ -161,16 +161,16 @@ impl TickImbalanceBar {
                     .unwrap_or(&threshold)
                     * 0.5;
 
+                threshold = threshold.min(threshold_max).max(threshold_min);
+
                 debug!(
                     "Tick Imbalance Bar: thres: {:?} decay: {:?} | imb: {:?}",
-                    threshold.min(threshold_max).max(threshold_min),
-                    self.threshold_decay(threshold.min(threshold_max).max(threshold_min)),
+                    threshold,
+                    self.threshold_decay(threshold),
                     self.imb
                 );
 
-                if self.imb.abs()
-                    >= self.threshold_decay(threshold.min(threshold_max).max(threshold_min))
-                {
+                if self.imb.abs() >= self.threshold_decay(threshold) {
                     // Record new EWMA
                     let b_t = self.imb / self.tsize as f32;
                     self.ewma_imb_current =
@@ -183,7 +183,9 @@ impl TickImbalanceBar {
                         self.historical_threshold.pop_front();
                     }
                     self.historical_threshold.push_back(threshold);
-                    self.imb_thres = threshold;
+
+                    // Update imb_thres
+                    self.imb_thres = self.threshold_decay(threshold);
 
                     // Create new bar
                     return Some(self.clone());

@@ -39,21 +39,37 @@ async fn main() {
     */
 
     // Data -> Websocket -> Engine
-    let (tx_fut_ob_data, rx_fut_ob_data) = mpsc::channel(999);
-    let (tx_fut_ob_prism, rx_fut_ob_prism) = mpsc::channel(999);
+    const CHANNEL_CAPACITY: usize = 999; // Channel capacity for all channels
 
-    let (tx_spt_ob_data, rx_spt_ob_data) = mpsc::channel(999);
-    let (tx_spt_ob_prism, rx_spt_ob_prism) = mpsc::channel(999);
+    // Future market channels
+    let (
+        (tx_fut_ob_data, rx_fut_ob_data),
+        (tx_fut_ob_prism, rx_fut_ob_prism),
+        (tx_fut_agg_data, rx_fut_agg_prism),
+        (tx_fut_exec, rx_fut_exec),
+        (tx_fut_db, rx_fut_db),
+    ) = (
+        mpsc::channel(CHANNEL_CAPACITY),
+        mpsc::channel(CHANNEL_CAPACITY),
+        mpsc::channel(CHANNEL_CAPACITY),
+        mpsc::channel(CHANNEL_CAPACITY),
+        mpsc::channel(CHANNEL_CAPACITY),
+    );
 
-    let (tx_fut_agg_data, rx_fut_agg_prism) = mpsc::channel(999);
-    let (tx_spt_agg_data, rx_spt_agg_prism) = mpsc::channel(999);
-
-    // Engine -> Executor (or database)
-    let (tx_fut_exec, rx_fut_exec) = mpsc::channel(999);
-    let (tx_spt_exec, rx_spt_exec) = mpsc::channel(999);
-
-    let (tx_fut_db, rx_fut_db) = mpsc::channel(999);
-    let (tx_spt_db, rx_spt_db) = mpsc::channel(999);
+    // Spot market channels
+    let (
+        (tx_spt_ob_data, rx_spt_ob_data),
+        (tx_spt_ob_prism, rx_spt_ob_prism),
+        (tx_spt_agg_data, rx_spt_agg_prism),
+        (tx_spt_exec, rx_spt_exec),
+        (tx_spt_db, rx_spt_db),
+    ) = (
+        mpsc::channel(CHANNEL_CAPACITY),
+        mpsc::channel(CHANNEL_CAPACITY),
+        mpsc::channel(CHANNEL_CAPACITY),
+        mpsc::channel(CHANNEL_CAPACITY),
+        mpsc::channel(CHANNEL_CAPACITY),
+    );
 
     /* Feature Creation Engine Start */
     let mut fut_engine = PrismFeatureEngine::new(
