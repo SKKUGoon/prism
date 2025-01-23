@@ -24,6 +24,7 @@ pub struct VolumeImbalanceBar {
     ewma_imb_current: f32,
     ewma_t_current: f32,
     historical_threshold: VecDeque<f32>,
+    pub imb_thres: f32, // Tick imbalance threshold. Just for logging
 }
 
 #[derive(Debug, Clone)]
@@ -54,6 +55,7 @@ impl VolumeImbalanceBar {
             ewma_imb_current: 0.0,
             ewma_t_current: 0.0,
             historical_threshold: VecDeque::new(),
+            imb_thres: 0.0,
         }
     }
 
@@ -101,6 +103,7 @@ impl VolumeImbalanceBar {
                         let threshold = self.ewma_imb_current.abs() * self.ewma_t_current;
 
                         self.historical_threshold.push_back(threshold);
+                        self.imb_thres = threshold;
 
                         debug!("Genesis Volume Imbalance Bar Created");
                         return Some(self.clone());
@@ -201,11 +204,10 @@ impl VolumeImbalanceBar {
                         self.historical_threshold.pop_front();
                     }
                     self.historical_threshold.push_back(threshold);
+                    self.imb_thres = threshold;
 
                     // Create new bar
-                    let bar = self.clone();
-
-                    return Some(bar);
+                    return Some(self.clone());
                 }
             }
             None => {

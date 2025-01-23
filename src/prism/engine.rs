@@ -122,6 +122,19 @@ impl PrismFeatureEngine {
         }
     }
 
+    fn update_dollar_imbalance_bar_both(&mut self, mkt_data: &MarketData) {
+        if self.feature.dollar_imbalance_bar_both_init {
+            if let Some(db) = self.feature.dollar_imbalance_bar_both.bar(mkt_data) {
+                self.feature.dollar_imbalance_bar_both = db.clone();
+                self.feature.dollar_imbalance_bar_both.reset();
+            }
+        } else if let Some(db) = self.feature.dollar_imbalance_bar_both.genesis_bar(mkt_data) {
+            self.feature.dollar_imbalance_bar_both = db;
+            self.feature.dollar_imbalance_bar_both_init = true;
+            self.feature.dollar_imbalance_bar_both.reset();
+        }
+    }
+
     fn update_volume_imbalance_bar_both(&mut self, mkt_data: &MarketData) {
         if self.feature.volume_imbalance_bar_both_init {
             if let Some(vb) = self.feature.volume_imbalance_bar_both.bar(mkt_data) {
@@ -200,6 +213,7 @@ impl PrismFeatureEngine {
                     self.update_volume_imbalance_bar_maker(&fut_mkt_data);
                     self.update_volume_imbalance_bar_taker(&fut_mkt_data);
                     self.update_tick_imbalance_bar(&fut_mkt_data);
+                    self.update_dollar_imbalance_bar_both(&fut_mkt_data);
 
                     // Update feature time
                     self.feature.feature_time = fut_mkt_data.time;

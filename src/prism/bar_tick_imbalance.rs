@@ -23,6 +23,7 @@ pub struct TickImbalanceBar {
     ewma_imb_current: f32,
     ewma_t_current: f32,
     historical_threshold: VecDeque<f32>,
+    pub imb_thres: f32, // Tick imbalance threshold. Just for logging
 }
 
 const TICK_IMBALANCE_BAR_THRESHOLD_COUNT: usize = 50;
@@ -45,6 +46,7 @@ impl TickImbalanceBar {
             ewma_imb_current: 0.0,
             ewma_t_current: 0.0,
             historical_threshold: VecDeque::new(),
+            imb_thres: 0.0,
         }
     }
 
@@ -86,6 +88,7 @@ impl TickImbalanceBar {
                         let threshold = self.ewma_imb_current.abs() * self.ewma_t_current;
 
                         self.historical_threshold.push_back(threshold);
+                        self.imb_thres = threshold;
 
                         debug!("Genesis Tick ImbalanceBar Created");
                         return Some(self.clone());
@@ -180,11 +183,10 @@ impl TickImbalanceBar {
                         self.historical_threshold.pop_front();
                     }
                     self.historical_threshold.push_back(threshold);
+                    self.imb_thres = threshold;
 
                     // Create new bar
-                    let bar = self.clone();
-
-                    return Some(bar);
+                    return Some(self.clone());
                 }
             }
             None => {
