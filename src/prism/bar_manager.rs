@@ -1,3 +1,4 @@
+use crate::prism::bar_dollar_imbalance::{DollarImbalanceBar, DollarVolumeType};
 use crate::prism::bar_tick_imbalance::TickImbalanceBar;
 use crate::prism::bar_volume_imbalance::{VolumeImbalanceBar, VolumeType};
 use std::collections::VecDeque;
@@ -15,6 +16,15 @@ pub struct Bar {
 
     pub volume_imbalance_bar_taker_queue: VecDeque<VolumeImbalanceBar>,
     volume_imbalance_bar_taker_max_capa: usize,
+
+    pub dollar_imbalance_bar_both_queue: VecDeque<DollarImbalanceBar>,
+    dollar_imbalance_bar_both_max_capa: usize,
+
+    pub dollar_imbalance_bar_maker_queue: VecDeque<DollarImbalanceBar>,
+    dollar_imbalance_bar_maker_max_capa: usize,
+
+    pub dollar_imbalance_bar_taker_queue: VecDeque<DollarImbalanceBar>,
+    dollar_imbalance_bar_taker_max_capa: usize,
 }
 
 #[allow(dead_code)]
@@ -33,6 +43,15 @@ impl Bar {
 
             volume_imbalance_bar_taker_queue: VecDeque::new(),
             volume_imbalance_bar_taker_max_capa: max_capacity,
+
+            dollar_imbalance_bar_both_queue: VecDeque::new(),
+            dollar_imbalance_bar_both_max_capa: max_capacity,
+
+            dollar_imbalance_bar_maker_queue: VecDeque::new(),
+            dollar_imbalance_bar_maker_max_capa: max_capacity,
+
+            dollar_imbalance_bar_taker_queue: VecDeque::new(),
+            dollar_imbalance_bar_taker_max_capa: max_capacity,
         }
     }
 
@@ -50,49 +69,64 @@ impl Bar {
     }
 
     pub fn update_volume_imbalance_bar(&mut self, bar: &VolumeImbalanceBar) {
-        match bar.volume_type {
-            VolumeType::Both => {
-                if self.volume_imbalance_bar_both_queue.len()
-                    >= self.volume_imbalance_bar_both_max_capa
-                {
-                    self.volume_imbalance_bar_both_queue.pop_front();
-                }
+        let (queue, max_capacity) = match bar.volume_type {
+            VolumeType::Both => (
+                &mut self.volume_imbalance_bar_both_queue,
+                self.volume_imbalance_bar_both_max_capa,
+            ),
+            VolumeType::Maker => (
+                &mut self.volume_imbalance_bar_maker_queue,
+                self.volume_imbalance_bar_maker_max_capa,
+            ),
+            VolumeType::Taker => (
+                &mut self.volume_imbalance_bar_taker_queue,
+                self.volume_imbalance_bar_taker_max_capa,
+            ),
+        };
 
-                if let Some(last_bar) = self.volume_imbalance_bar_both_queue.back() {
-                    if last_bar.id == bar.id {
-                        return;
-                    }
-                }
-                self.volume_imbalance_bar_both_queue.push_back(bar.clone());
-            }
-            VolumeType::Maker => {
-                if self.volume_imbalance_bar_maker_queue.len()
-                    >= self.volume_imbalance_bar_maker_max_capa
-                {
-                    self.volume_imbalance_bar_maker_queue.pop_front();
-                }
+        // Pop front if queue is at capacity
+        if queue.len() >= max_capacity {
+            queue.pop_front();
+        }
 
-                if let Some(last_bar) = self.volume_imbalance_bar_maker_queue.back() {
-                    if last_bar.id == bar.id {
-                        return;
-                    }
-                }
-                self.volume_imbalance_bar_maker_queue.push_back(bar.clone());
-            }
-            VolumeType::Taker => {
-                if self.volume_imbalance_bar_taker_queue.len()
-                    >= self.volume_imbalance_bar_taker_max_capa
-                {
-                    self.volume_imbalance_bar_taker_queue.pop_front();
-                }
-
-                if let Some(last_bar) = self.volume_imbalance_bar_taker_queue.back() {
-                    if last_bar.id == bar.id {
-                        return;
-                    }
-                }
-                self.volume_imbalance_bar_taker_queue.push_back(bar.clone());
+        // Skip if bar already exists
+        if let Some(last_bar) = queue.back() {
+            if last_bar.id == bar.id {
+                return;
             }
         }
+
+        queue.push_back(bar.clone());
+    }
+
+    pub fn update_dollar_imbalance_bar(&mut self, bar: &DollarImbalanceBar) {
+        let (queue, max_capacity) = match bar.volume_type {
+            DollarVolumeType::Both => (
+                &mut self.dollar_imbalance_bar_both_queue,
+                self.dollar_imbalance_bar_both_max_capa,
+            ),
+            DollarVolumeType::Maker => (
+                &mut self.dollar_imbalance_bar_maker_queue,
+                self.dollar_imbalance_bar_maker_max_capa,
+            ),
+            DollarVolumeType::Taker => (
+                &mut self.dollar_imbalance_bar_taker_queue,
+                self.dollar_imbalance_bar_taker_max_capa,
+            ),
+        };
+
+        // Pop front if queue is at capacity
+        if queue.len() >= max_capacity {
+            queue.pop_front();
+        }
+
+        // Skip if bar already exists
+        if let Some(last_bar) = queue.back() {
+            if last_bar.id == bar.id {
+                return;
+            }
+        }
+
+        queue.push_back(bar.clone());
     }
 }

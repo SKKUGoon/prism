@@ -1,5 +1,6 @@
 use crate::data::market::binance_aggtrade_future::MarketData;
 use crate::data::orderbook::book::OrderbookData;
+use crate::prism::bar_dollar_imbalance::{DollarImbalanceBar, DollarVolumeType};
 use crate::prism::bar_tick_imbalance::TickImbalanceBar;
 use crate::prism::bar_volume_imbalance::{VolumeImbalanceBar, VolumeType};
 use core::f32;
@@ -43,6 +44,15 @@ pub struct PrismaFeature {
 
     pub volume_imbalance_bar_taker: VolumeImbalanceBar,
     volume_imbalance_bar_taker_init: bool,
+
+    pub dollar_imbalance_bar_both: DollarImbalanceBar,
+    dollar_imbalance_bar_both_init: bool,
+
+    pub dollar_imbalance_bar_maker: DollarImbalanceBar,
+    dollar_imbalance_bar_maker_init: bool,
+
+    pub dollar_imbalance_bar_taker: DollarImbalanceBar,
+    dollar_imbalance_bar_taker_init: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -99,6 +109,15 @@ impl PrismFeatureEngine {
 
                 volume_imbalance_bar_taker: VolumeImbalanceBar::new(VolumeType::Taker),
                 volume_imbalance_bar_taker_init: false,
+
+                dollar_imbalance_bar_both: DollarImbalanceBar::new(DollarVolumeType::Both),
+                dollar_imbalance_bar_both_init: false,
+
+                dollar_imbalance_bar_maker: DollarImbalanceBar::new(DollarVolumeType::Maker),
+                dollar_imbalance_bar_maker_init: false,
+
+                dollar_imbalance_bar_taker: DollarImbalanceBar::new(DollarVolumeType::Taker),
+                dollar_imbalance_bar_taker_init: false,
             },
         }
     }

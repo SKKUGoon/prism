@@ -92,20 +92,33 @@ impl Prism {
         loop {
             tokio::select! {
                 Some(feature) = self.rx_fut_feature.recv() => {
+                    let start = std::time::Instant::now();
+
                     self.fut_bar.update_tick_imbalance_bar(&feature.tick_imbalance_bar);
                     self.fut_bar.update_volume_imbalance_bar(&feature.volume_imbalance_bar_both);
                     self.fut_bar.update_volume_imbalance_bar(&feature.volume_imbalance_bar_maker);
                     self.fut_bar.update_volume_imbalance_bar(&feature.volume_imbalance_bar_taker);
+                    self.fut_bar.update_dollar_imbalance_bar(&feature.dollar_imbalance_bar_both);
+                    self.fut_bar.update_dollar_imbalance_bar(&feature.dollar_imbalance_bar_maker);
+                    self.fut_bar.update_dollar_imbalance_bar(&feature.dollar_imbalance_bar_taker);
+
+                    log::debug!("Future feature processing took: {:?}", start.elapsed());
                     if self.config.data_dump {
                         self.tx_fut_db.send(feature).await.unwrap();
                     }
                 }
                 Some(feature) = self.rx_spt_feature.recv() => {
+                    let start = std::time::Instant::now();
+
                     self.spt_bar.update_tick_imbalance_bar(&feature.tick_imbalance_bar);
                     self.spt_bar.update_volume_imbalance_bar(&feature.volume_imbalance_bar_both);
                     self.spt_bar.update_volume_imbalance_bar(&feature.volume_imbalance_bar_maker);
                     self.spt_bar.update_volume_imbalance_bar(&feature.volume_imbalance_bar_taker);
+                    self.spt_bar.update_dollar_imbalance_bar(&feature.dollar_imbalance_bar_both);
+                    self.spt_bar.update_dollar_imbalance_bar(&feature.dollar_imbalance_bar_maker);
+                    self.spt_bar.update_dollar_imbalance_bar(&feature.dollar_imbalance_bar_taker);
 
+                    log::debug!("Spot feature processing took: {:?}", start.elapsed());
                     if self.config.data_dump {
                         self.tx_spt_db.send(feature).await.unwrap();
                     }

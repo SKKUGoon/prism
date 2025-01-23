@@ -1,3 +1,4 @@
+pub mod bar_dollar_imbalance;
 pub mod bar_manager;
 pub mod bar_tick_imbalance;
 pub mod bar_volume_imbalance;

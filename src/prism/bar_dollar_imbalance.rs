@@ -3,7 +3,7 @@ use log::debug;
 use std::collections::VecDeque;
 
 #[derive(Debug, Clone)]
-pub struct VolumeImbalanceBar {
+pub struct DollarImbalanceBar {
     // Volume Imbalance Bar
     pub id: String,
     pub ts: Option<u64>, // Time start, Timestamp
@@ -14,7 +14,7 @@ pub struct VolumeImbalanceBar {
     pub pc: Option<f32>, // Price close
     pub imb: f32,        // Tick imbalance
     pub tsize: usize,    // Tick count
-    pub volume_type: VolumeType,
+    pub volume_type: DollarVolumeType,
 
     // Constant
     genesis_collect_period: u64, // Cumulative time for creating the first bar
@@ -27,16 +27,16 @@ pub struct VolumeImbalanceBar {
 }
 
 #[derive(Debug, Clone)]
-pub enum VolumeType {
+pub enum DollarVolumeType {
     Maker,
     Taker,
     Both,
 }
 
-const VOLUME_IMBALANCE_BAR_THRESHOLD_COUNT: usize = 50;
+const DOLLAR_IMBALANCE_BAR_THRESHOLD_COUNT: usize = 50;
 
-impl VolumeImbalanceBar {
-    pub fn new(volume_type: VolumeType) -> Self {
+impl DollarImbalanceBar {
+    pub fn new(volume_type: DollarVolumeType) -> Self {
         Self {
             id: uuid::Uuid::new_v4().to_string(),
             ts: None,
@@ -57,7 +57,7 @@ impl VolumeImbalanceBar {
         }
     }
 
-    pub fn genesis_bar(&mut self, mkt_data: &MarketData) -> Option<VolumeImbalanceBar> {
+    pub fn genesis_bar(&mut self, mkt_data: &MarketData) -> Option<DollarImbalanceBar> {
         match self.ts {
             Some(ts) => {
                 // Retrieve the most recent price from `pe`
@@ -71,13 +71,13 @@ impl VolumeImbalanceBar {
                 };
 
                 let should_update = match self.volume_type {
-                    VolumeType::Maker => mkt_data.buyer_market_maker,
-                    VolumeType::Taker => !mkt_data.buyer_market_maker,
-                    VolumeType::Both => true,
+                    DollarVolumeType::Maker => mkt_data.buyer_market_maker,
+                    DollarVolumeType::Taker => !mkt_data.buyer_market_maker,
+                    DollarVolumeType::Both => true,
                 };
 
                 if should_update {
-                    self.imb += tick_imbalance * mkt_data.quantity;
+                    self.imb += tick_imbalance * mkt_data.quantity * mkt_data.price;
                     self.tsize += 1;
                 }
 
@@ -133,7 +133,7 @@ impl VolumeImbalanceBar {
         }
     }
 
-    pub fn bar(&mut self, mkt_data: &MarketData) -> Option<VolumeImbalanceBar> {
+    pub fn bar(&mut self, mkt_data: &MarketData) -> Option<DollarImbalanceBar> {
         match self.ts {
             Some(_) => {
                 let prev_price = self.pc.unwrap(); // Guaranteed to be Some
@@ -146,13 +146,13 @@ impl VolumeImbalanceBar {
                 };
 
                 let should_update = match self.volume_type {
-                    VolumeType::Maker => mkt_data.buyer_market_maker,
-                    VolumeType::Taker => !mkt_data.buyer_market_maker,
-                    VolumeType::Both => true,
+                    DollarVolumeType::Maker => mkt_data.buyer_market_maker,
+                    DollarVolumeType::Taker => !mkt_data.buyer_market_maker,
+                    DollarVolumeType::Both => true,
                 };
 
                 if should_update {
-                    self.imb += tick_imbalance * mkt_data.quantity;
+                    self.imb += tick_imbalance * mkt_data.quantity * mkt_data.price;
                     self.tsize += 1;
                 }
 
@@ -197,7 +197,7 @@ impl VolumeImbalanceBar {
                         + (1.0 - self.ewma_factor) * self.ewma_t_current; // EWMA_t = lambda * t_t + (1 - lambda) * EWMA_t-1
 
                     // Update historical threshold
-                    if self.historical_threshold.len() >= VOLUME_IMBALANCE_BAR_THRESHOLD_COUNT {
+                    if self.historical_threshold.len() >= DOLLAR_IMBALANCE_BAR_THRESHOLD_COUNT {
                         self.historical_threshold.pop_front();
                     }
                     self.historical_threshold.push_back(threshold);
