@@ -1,4 +1,7 @@
+use log::debug;
+
 use crate::data::market::binance_aggtrade_future::MarketData;
+use std::collections::VecDeque;
 
 #[derive(Debug, Clone)]
 pub struct VolumeImbalanceBar {
@@ -18,9 +21,10 @@ pub struct VolumeImbalanceBar {
     genesis_collect_period: u64, // Cumulative time for creating the first bar
     ewma_factor: f32,
 
-    // EWMA - No Reset
+    // Threshold manager
     ewma_imb_current: f32,
     ewma_t_current: f32,
+    historical_threshold: VecDeque<f32>,
 }
 
 #[derive(Debug, Clone)]
@@ -29,6 +33,8 @@ pub enum VolumeType {
     Taker,
     Both,
 }
+
+const VOLUME_IMBALANCE_BAR_THRESHOLD_COUNT: usize = 50;
 
 impl VolumeImbalanceBar {
     pub fn new(volume_type: VolumeType) -> Self {
@@ -48,6 +54,7 @@ impl VolumeImbalanceBar {
             volume_type,
             ewma_imb_current: 0.0,
             ewma_t_current: 0.0,
+            historical_threshold: VecDeque::new(),
         }
     }
 
@@ -58,30 +65,22 @@ impl VolumeImbalanceBar {
                 let prev_price = self.pc.unwrap(); // Guaranteed to be Some
                 let price_change = mkt_data.price - prev_price;
 
-                let tick_imbalance = if price_change > 0.0 {
-                    1.0 // Price Increase - Motivated by the buyers
-                } else if price_change < 0.0 {
-                    -1.0 // Price Decrease - Motivated by the sellers
-                } else {
-                    0.0 // Price Stable - Order Match
+                let tick_imbalance = match price_change.total_cmp(&0.0) {
+                    std::cmp::Ordering::Greater => 1.0, // Price increase - buyer motivated
+                    std::cmp::Ordering::Less => -1.0,   // Price decrease - seller motivated
+                    std::cmp::Ordering::Equal => 0.0,   // Price stable - matched orders
                 };
 
-                match self.volume_type {
-                    VolumeType::Maker => {
-                        if mkt_data.buyer_market_maker {
-                            self.imb += tick_imbalance * mkt_data.quantity;
-                        }
-                    }
-                    VolumeType::Taker => {
-                        if !mkt_data.buyer_market_maker {
-                            self.imb += tick_imbalance * mkt_data.quantity;
-                        }
-                    }
-                    VolumeType::Both => {
-                        self.imb += tick_imbalance * mkt_data.quantity;
-                    }
+                let should_update = match self.volume_type {
+                    VolumeType::Maker => mkt_data.buyer_market_maker,
+                    VolumeType::Taker => !mkt_data.buyer_market_maker,
+                    VolumeType::Both => true,
+                };
+
+                if should_update {
+                    self.imb += tick_imbalance * mkt_data.quantity;
+                    self.tsize += 1;
                 }
-                self.tsize += 1;
 
                 // Update existing bar
                 self.te = Some(mkt_data.time);
@@ -90,7 +89,9 @@ impl VolumeImbalanceBar {
                 self.pl = Some(self.pl.unwrap().min(mkt_data.price));
 
                 if let Some(te) = self.te {
-                    if te - ts >= self.genesis_collect_period {
+                    if (te - ts >= self.genesis_collect_period)
+                        && (self.imb / self.tsize as f32 != 0.0)
+                    {
                         // Create new bar
                         let b_t = self.imb / self.tsize as f32;
                         self.ewma_imb_current = b_t * self.ewma_factor
@@ -98,6 +99,11 @@ impl VolumeImbalanceBar {
                         self.ewma_t_current = self.tsize as f32 * self.ewma_factor
                             + (1.0 - self.ewma_factor) * self.ewma_t_current; // EWMA_t = lambda * t_t + (1 - lambda) * EWMA_t-1
 
+                        let threshold = self.ewma_imb_current.abs() * self.ewma_t_current;
+
+                        self.historical_threshold.push_back(threshold);
+
+                        debug!("Genesis Volume Imbalance Bar Created");
                         return Some(self.clone());
                     }
                 }
@@ -119,36 +125,37 @@ impl VolumeImbalanceBar {
         None
     }
 
+    fn threshold_decay(&mut self, initial_value: f32) -> f32 {
+        let (k1, k2) = (0.0001, 0.01);
+        if self.tsize <= 5000usize {
+            initial_value * (-k1 * (self.tsize as f32).sqrt()).exp() // Slow decay for t <= 5000
+        } else {
+            initial_value * (-k2 * ((self.tsize as f32) - 5000.0).sqrt()).exp() // Faster decay after 5000
+        }
+    }
+
     pub fn bar(&mut self, mkt_data: &MarketData) -> Option<VolumeImbalanceBar> {
         match self.ts {
             Some(_) => {
                 let prev_price = self.pc.unwrap(); // Guaranteed to be Some
-                let price_change = mkt_data.price - prev_price;
 
-                let tick_imbalance = if price_change > 0.0 {
-                    1.0 // Price Increase - Motivated by the buyers
-                } else if price_change < 0.0 {
-                    -1.0 // Price Decrease - Motivated by the sellers
-                } else {
-                    0.0 // Price Stable - Order Match
+                let price_change = mkt_data.price - prev_price;
+                let tick_imbalance = match price_change.total_cmp(&0.0) {
+                    std::cmp::Ordering::Greater => 1.0, // Price increase - buyer motivated
+                    std::cmp::Ordering::Less => -1.0,   // Price decrease - seller motivated
+                    std::cmp::Ordering::Equal => 0.0,   // Price stable - matched orders
                 };
 
-                match self.volume_type {
-                    VolumeType::Maker => {
-                        if mkt_data.buyer_market_maker {
-                            self.imb += tick_imbalance * mkt_data.quantity;
-                        }
-                    }
-                    VolumeType::Taker => {
-                        if !mkt_data.buyer_market_maker {
-                            self.imb += tick_imbalance * mkt_data.quantity;
-                        }
-                    }
-                    VolumeType::Both => {
-                        self.imb += tick_imbalance * mkt_data.quantity;
-                    }
+                let should_update = match self.volume_type {
+                    VolumeType::Maker => mkt_data.buyer_market_maker,
+                    VolumeType::Taker => !mkt_data.buyer_market_maker,
+                    VolumeType::Both => true,
+                };
+
+                if should_update {
+                    self.imb += tick_imbalance * mkt_data.quantity;
+                    self.tsize += 1;
                 }
-                self.tsize += 1;
 
                 // Update existing bar
                 self.te = Some(mkt_data.time);
@@ -156,7 +163,33 @@ impl VolumeImbalanceBar {
                 self.ph = Some(self.ph.unwrap().max(mkt_data.price));
                 self.pl = Some(self.pl.unwrap().min(mkt_data.price));
 
-                if self.imb.abs() >= self.ewma_imb_current.abs() * self.ewma_t_current {
+                let threshold = self.ewma_imb_current.abs() * self.ewma_t_current;
+
+                // Manually set a threshold's limit to prevent the threshold explosion
+                let threshold_max = self
+                    .historical_threshold
+                    .iter()
+                    .max_by(|a, b| a.partial_cmp(b).unwrap())
+                    .unwrap_or(&threshold)
+                    * 1.5;
+
+                let threshold_min = self
+                    .historical_threshold
+                    .iter()
+                    .min_by(|a, b| a.partial_cmp(b).unwrap())
+                    .unwrap_or(&threshold)
+                    * 0.5;
+
+                debug!(
+                    "Volume Imbalance Bar: thres: {:?} decay: {:?} | imb: {:?}",
+                    threshold.min(threshold_max).max(threshold_min),
+                    self.threshold_decay(threshold.min(threshold_max).max(threshold_min)),
+                    self.imb
+                );
+
+                if self.imb.abs()
+                    >= self.threshold_decay(threshold.min(threshold_max).max(threshold_min))
+                {
                     // Record new EWMA
                     let b_t = self.imb / self.tsize as f32;
                     self.ewma_imb_current =
@@ -164,8 +197,15 @@ impl VolumeImbalanceBar {
                     self.ewma_t_current = self.tsize as f32 * self.ewma_factor
                         + (1.0 - self.ewma_factor) * self.ewma_t_current; // EWMA_t = lambda * t_t + (1 - lambda) * EWMA_t-1
 
+                    // Update historical threshold
+                    if self.historical_threshold.len() >= VOLUME_IMBALANCE_BAR_THRESHOLD_COUNT {
+                        self.historical_threshold.pop_front();
+                    }
+                    self.historical_threshold.push_back(threshold);
+
                     // Create new bar
                     let bar = self.clone();
+
                     return Some(bar);
                 }
             }
