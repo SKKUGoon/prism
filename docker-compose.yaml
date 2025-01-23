@@ -11,14 +11,14 @@ services:
       - TABLE=features_xrpusdt
     restart: unless-stopped
 
-  prism-doge:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    environment:
-      - RUST_LOG=info
-      - SYMBOLS=dogeusdt
-      - TABLE=features_dogeusdt
-    restart: unless-stopped
+  # prism-doge:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   extra_hosts:
+  #     - "host.docker.internal:host-gateway"
+  #   environment:
+  #     - RUST_LOG=info
+  #     - SYMBOLS=dogeusdt
+  #     - TABLE=features_dogeusdt
+  #   restart: unless-stopped
