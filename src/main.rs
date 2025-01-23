@@ -22,14 +22,8 @@ mod trade;
 async fn main() {
     env_logger::init();
     let symbol = env::var("SYMBOLS").unwrap_or_else(|_| "xrpusdt".to_string());
-    let table_fut = format!(
-        "{}_future",
-        env::var("TABLE").unwrap_or_else(|_| "feature_xrpusdt".to_string())
-    );
-    let table_spt = format!(
-        "{}_spot",
-        env::var("TABLE").unwrap_or_else(|_| "feature_xrpusdt".to_string())
-    );
+    let table_fut = env::var("TABLE_FUT").unwrap_or_else(|_| "feature_xrpusdt_future".to_string());
+    let table_spt = env::var("TABLE_SPT").unwrap_or_else(|_| "feature_xrpusdt_spot".to_string());
 
     /*
     Create Channels
