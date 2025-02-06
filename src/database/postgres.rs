@@ -87,10 +87,9 @@ async fn batch_insert_into_timescale(
     for feature in features {
         placeholders.push(format!(
             "(
-                to_timestamp(${}::FLOAT8), ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${},
-                ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${},
-                ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${},
-                ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${}
+                to_timestamp(${}::FLOAT8), ${}, ${}, ${}, ${}, ${}, ${}, ${},
+                ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${}, 
+                ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${}
             )",
             param_index,     // time
             param_index + 1, // source
@@ -118,33 +117,15 @@ async fn batch_insert_into_timescale(
             param_index + 21, // imb (vmb_imb_curr)
             param_index + 22, // thres (vmb_thres_curr)
             param_index + 23, // vwap (vmb_vwap_curr)
-            // Volume imbalance bar maker
-            param_index + 24, // id (vmm_id_hist)
-            param_index + 25, // imb (vmm_imb_hist)
-            param_index + 26, // thres (vmm_thres_hist)
-            param_index + 27, // aggressiveness (vmm_aggressiveness_hist)
-            param_index + 28, // aggressiveness_volume (vmm_aggressiveness_volume_hist)
-            param_index + 29, // imb (vmm_imb_curr)
-            param_index + 30, // thres (vmm_thres_curr)
-            param_index + 31, // vwap (vmm_vwap_curr)
-            // Volume imbalance bar taker
-            param_index + 32, // id (vmt_id_hist)
-            param_index + 33, // imb (vmt_imb_hist)
-            param_index + 34, // thres (vmt_thres_hist)
-            param_index + 35, // aggressiveness (vmt_aggressiveness_hist)
-            param_index + 36, // aggressiveness_volume (vmt_aggressiveness_volume_hist)
-            param_index + 37, // imb (vmt_imb_curr)
-            param_index + 38, // thres (vmt_thres_curr)
-            param_index + 39, // vwap (vmt_vwap_curr)
             // Dollar imbalance bar
-            param_index + 40, // id (dib_id_hist)
-            param_index + 41, // imb (dib_imb_hist)
-            param_index + 42, // thres (dib_thres_hist)
-            param_index + 43, // aggressiveness (dib_aggressiveness_hist)
-            param_index + 44, // aggressiveness_volume (dib_aggressiveness_volume_hist)
-            param_index + 45, // imb (dib_imb_curr)
-            param_index + 46, // thres (dib_thres_curr)
-            param_index + 47, // vwap (dib_vwap_curr)
+            param_index + 24, // id (dib_id_hist)
+            param_index + 25, // imb (dib_imb_hist)
+            param_index + 26, // thres (dib_thres_hist)
+            param_index + 27, // aggressiveness (dib_aggressiveness_hist)
+            param_index + 28, // aggressiveness_volume (dib_aggressiveness_volume_hist)
+            param_index + 29, // imb (dib_imb_curr)
+            param_index + 30, // thres (dib_thres_curr)
+            param_index + 31, // vwap (dib_vwap_curr)
         ));
 
         values.push(Box::new(feature.trade_time as f64 / 1000.0)); // time
@@ -157,65 +138,38 @@ async fn batch_insert_into_timescale(
         values.push(Box::new(feature.ob_spread)); // ob_spread
 
         // Tick imbalance bar
-        values.push(Box::new(feature.tick_imbalance_bar.id.clone())); // tib_id_hist
-        values.push(Box::new(feature.tick_imbalance_bar.imb)); // tib_imb_hist
-        values.push(Box::new(feature.tick_imbalance_bar.imb_thres)); // tib_thres_hist
-        values.push(Box::new(feature.tick_imbalance_bar.aggressive())); // tib_aggressiveness_hist
-        values.push(Box::new(feature.tick_imbalance_bar.aggressive_vol())); // tib_aggressiveness_volume_hist
-
+        values.push(Box::new(feature.tick_imbalance_bar.bar.id.clone())); // tib_id_hist
+        values.push(Box::new(feature.tick_imbalance_bar.bar.imb)); // tib_imb_hist
+        values.push(Box::new(feature.tick_imbalance_bar.bar.imb_thres)); // tib_thres_hist
+        values.push(Box::new(feature.tick_imbalance_bar.bar.aggressive())); // tib_aggressiveness_hist
+        values.push(Box::new(feature.tick_imbalance_bar.bar.aggressive_vol())); // tib_aggressiveness_volume_hist
         values.push(Box::new(feature.tick_imbalance)); // tib_imb_curr
         values.push(Box::new(feature.tick_imbalance_thres)); // tib_thres_curr
         values.push(Box::new(feature.tick_imbalance_vwap)); // tib_vwap_curr
 
         // Volume imbalance bar
-        values.push(Box::new(feature.volume_imbalance_bar_both.id.clone())); // vmb_id_hist
-        values.push(Box::new(feature.volume_imbalance_bar_both.imb)); // vmb_imb_hist
-        values.push(Box::new(feature.volume_imbalance_bar_both.imb_thres)); // vmb_thres_hist
-        values.push(Box::new(feature.volume_imbalance_bar_both.aggressive())); // vmb_aggressiveness_hist
-        values.push(Box::new(feature.volume_imbalance_bar_both.aggressive_vol())); // vmb_aggressiveness_volume_hist
+        values.push(Box::new(feature.volume_imbalance_bar.bar.id.clone())); // vmb_id_hist
+        values.push(Box::new(feature.volume_imbalance_bar.bar.imb)); // vmb_imb_hist
+        values.push(Box::new(feature.volume_imbalance_bar.bar.imb_thres)); // vmb_thres_hist
+        values.push(Box::new(feature.volume_imbalance_bar.bar.aggressive())); // vmb_aggressiveness_hist
+        values.push(Box::new(feature.volume_imbalance_bar.bar.aggressive_vol())); // vmb_aggressiveness_volume_hist
 
-        values.push(Box::new(feature.volume_imbalance_both)); // vmb_imb_curr
-        values.push(Box::new(feature.volume_imbalance_both_thres)); // vmb_thres_curr
-        values.push(Box::new(feature.volume_imbalance_both_vwap)); // vmb_vwap_curr
-
-        // Volume imbalance bar maker
-        values.push(Box::new(feature.volume_imbalance_bar_maker.id.clone())); // vmm_id_hist
-        values.push(Box::new(feature.volume_imbalance_bar_maker.imb)); // vmm_imb_hist
-        values.push(Box::new(feature.volume_imbalance_bar_maker.imb_thres)); // vmm_thres_hist
-        values.push(Box::new(feature.volume_imbalance_bar_maker.aggressive())); // vmm_aggressiveness_hist
-        values.push(Box::new(
-            feature.volume_imbalance_bar_maker.aggressive_vol(),
-        )); // vmm_aggressiveness_volume_hist
-
-        values.push(Box::new(feature.volume_imbalance_maker)); // vmm_imb_curr
-        values.push(Box::new(feature.volume_imbalance_maker_thres)); // vmm_thres_curr
-        values.push(Box::new(feature.volume_imbalance_maker_vwap)); // vmm_vwap_curr
-
-        // Volume imbalance bar taker
-        values.push(Box::new(feature.volume_imbalance_bar_taker.id.clone())); // vmt_id_hist
-        values.push(Box::new(feature.volume_imbalance_bar_taker.imb)); // vmt_imb_hist
-        values.push(Box::new(feature.volume_imbalance_bar_taker.imb_thres)); // vmt_thres_hist
-        values.push(Box::new(feature.volume_imbalance_bar_taker.aggressive())); // vmt_aggressiveness_hist
-        values.push(Box::new(
-            feature.volume_imbalance_bar_taker.aggressive_vol(),
-        )); // vmt_aggressiveness_volume_hist
-
-        values.push(Box::new(feature.volume_imbalance_taker)); // vmt_imb_curr
-        values.push(Box::new(feature.volume_imbalance_taker_thres)); // vmt_thres_curr
-        values.push(Box::new(feature.volume_imbalance_taker_vwap)); // vmt_vwap_curr
+        values.push(Box::new(feature.volume_imbalance)); // vmb_imb_curr
+        values.push(Box::new(feature.volume_imbalance_thres)); // vmb_thres_curr
+        values.push(Box::new(feature.volume_imbalance_vwap)); // vmb_vwap_curr
 
         // Dollar imbalance bar
-        values.push(Box::new(feature.dollar_imbalance_bar_both.id.clone())); // dib_id_hist
-        values.push(Box::new(feature.dollar_imbalance_bar_both.imb)); // dib_imb_hist
-        values.push(Box::new(feature.dollar_imbalance_bar_both.imb_thres)); // dib_thres_hist
-        values.push(Box::new(feature.dollar_imbalance_bar_both.aggressive())); // dib_aggressiveness_hist
-        values.push(Box::new(feature.dollar_imbalance_bar_both.aggressive_vol())); // dib_aggressiveness_volume_hist
+        values.push(Box::new(feature.dollar_imbalance_bar.bar.id.clone())); // dib_id_hist
+        values.push(Box::new(feature.dollar_imbalance_bar.bar.imb)); // dib_imb_hist
+        values.push(Box::new(feature.dollar_imbalance_bar.bar.imb_thres)); // dib_thres_hist
+        values.push(Box::new(feature.dollar_imbalance_bar.bar.aggressive())); // dib_aggressiveness_hist
+        values.push(Box::new(feature.dollar_imbalance_bar.bar.aggressive_vol())); // dib_aggressiveness_volume_hist
 
         values.push(Box::new(feature.dollar_imbalance)); // dib_imb_curr
         values.push(Box::new(feature.dollar_imbalance_thres)); // dib_thres_curr
-        values.push(Box::new(feature.dollar_imbalance_both_vwap)); // dib_vwap_curr
+        values.push(Box::new(feature.dollar_imbalance_vwap)); // dib_vwap_curr
 
-        param_index += 48;
+        param_index += 32;
     }
 
     let combined_data = placeholders.join(",");

@@ -1,4 +1,4 @@
-use crate::prism::bar_manager::Bar;
+use crate::prism::bar_manager::BarManager;
 use crate::prism::stream_process::FeatureProcessed;
 use crate::prism::AssetSource;
 use log::debug;
@@ -69,8 +69,8 @@ struct TradeComputer {
     historical_spot_dollar_vwap: VecDeque<f32>,
 
     // Information bars
-    fut_bar: Bar, // Historical bars
-    spt_bar: Bar,
+    fut_bar: BarManager, // Historical bars
+    spt_bar: BarManager,
 
     // Imbalances
     future_tick_imbalance: Option<f32>,
@@ -128,8 +128,8 @@ impl TradeComputer {
             historical_spot_dollar_vwap: VecDeque::new(),
 
             // Information bars
-            fut_bar: Bar::new(100),
-            spt_bar: Bar::new(100),
+            fut_bar: BarManager::new(100),
+            spt_bar: BarManager::new(100),
 
             // Imbalances
             future_tick_imbalance: None,
@@ -159,26 +159,18 @@ impl TradeComputer {
         self.fut_bar
             .update_tick_imbalance_bar(&data.tick_imbalance_bar);
         self.fut_bar
-            .update_volume_imbalance_bar(&data.volume_imbalance_bar_both);
+            .update_volume_imbalance_bar(&data.volume_imbalance_bar);
         self.fut_bar
-            .update_volume_imbalance_bar(&data.volume_imbalance_bar_maker);
-        self.fut_bar
-            .update_volume_imbalance_bar(&data.volume_imbalance_bar_taker);
-        self.fut_bar
-            .update_dollar_imbalance_bar(&data.dollar_imbalance_bar_both);
+            .update_dollar_imbalance_bar(&data.dollar_imbalance_bar);
     }
 
     pub fn update_spot_bars(&mut self, data: &FeatureProcessed) {
         self.spt_bar
             .update_tick_imbalance_bar(&data.tick_imbalance_bar);
         self.spt_bar
-            .update_volume_imbalance_bar(&data.volume_imbalance_bar_both);
+            .update_volume_imbalance_bar(&data.volume_imbalance_bar);
         self.spt_bar
-            .update_volume_imbalance_bar(&data.volume_imbalance_bar_maker);
-        self.spt_bar
-            .update_volume_imbalance_bar(&data.volume_imbalance_bar_taker);
-        self.spt_bar
-            .update_dollar_imbalance_bar(&data.dollar_imbalance_bar_both);
+            .update_dollar_imbalance_bar(&data.dollar_imbalance_bar);
     }
 
     pub fn update_trade_params(&mut self, data: &FeatureProcessed, source: AssetSource) {
@@ -186,22 +178,22 @@ impl TradeComputer {
             AssetSource::Future => {
                 self.future_price = Some(data.price);
                 self.future_tick_vwap = Some(data.tick_imbalance_vwap);
-                self.future_volume_vwap = Some(data.volume_imbalance_both_vwap);
-                self.future_dollar_vwap = Some(data.dollar_imbalance_both_vwap);
+                self.future_volume_vwap = Some(data.volume_imbalance_vwap);
+                self.future_dollar_vwap = Some(data.dollar_imbalance_vwap);
 
                 self.future_tick_imbalance = Some(data.tick_imbalance);
-                self.future_volume_imbalance = Some(data.volume_imbalance_both);
+                self.future_volume_imbalance = Some(data.volume_imbalance);
                 self.future_dollar_imbalance = Some(data.dollar_imbalance);
 
                 self.historical_future_tick_vwap
                     .push_back(data.tick_imbalance_vwap);
                 self.historical_future_volume_vwap
-                    .push_back(data.volume_imbalance_both_vwap);
+                    .push_back(data.volume_imbalance_vwap);
                 self.historical_future_dollar_vwap
-                    .push_back(data.dollar_imbalance_both_vwap);
+                    .push_back(data.dollar_imbalance_vwap);
 
                 self.future_tick_imbalance_thres = Some(data.tick_imbalance_thres);
-                self.future_volume_imbalance_thres = Some(data.volume_imbalance_both_thres);
+                self.future_volume_imbalance_thres = Some(data.volume_imbalance_thres);
                 self.future_dollar_imbalance_thres = Some(data.dollar_imbalance_thres);
 
                 // self.historical_future_tick_imbalance
@@ -214,22 +206,22 @@ impl TradeComputer {
             AssetSource::Spot => {
                 self.spot_price = Some(data.price);
                 self.spot_tick_vwap = Some(data.tick_imbalance_vwap);
-                self.spot_volume_vwap = Some(data.volume_imbalance_both_vwap);
-                self.spot_dollar_vwap = Some(data.dollar_imbalance_both_vwap);
+                self.spot_volume_vwap = Some(data.volume_imbalance_vwap);
+                self.spot_dollar_vwap = Some(data.dollar_imbalance_vwap);
 
                 self.spot_tick_imbalance = Some(data.tick_imbalance);
-                self.spot_volume_imbalance = Some(data.volume_imbalance_both);
+                self.spot_volume_imbalance = Some(data.volume_imbalance);
                 self.spot_dollar_imbalance = Some(data.dollar_imbalance);
 
                 self.historical_spot_tick_vwap
                     .push_back(data.tick_imbalance_vwap);
                 self.historical_spot_volume_vwap
-                    .push_back(data.volume_imbalance_both_vwap);
+                    .push_back(data.volume_imbalance_vwap);
                 self.historical_spot_dollar_vwap
-                    .push_back(data.dollar_imbalance_both_vwap);
+                    .push_back(data.dollar_imbalance_vwap);
 
                 self.spot_tick_imbalance_thres = Some(data.tick_imbalance_thres);
-                self.spot_volume_imbalance_thres = Some(data.volume_imbalance_both_thres);
+                self.spot_volume_imbalance_thres = Some(data.volume_imbalance_thres);
                 self.spot_dollar_imbalance_thres = Some(data.dollar_imbalance_thres);
 
                 // self.historical_spot_tick_imbalance
@@ -255,8 +247,8 @@ pub struct PrismTradeManager {
     // Read Features
     rx_fut_feature: mpsc::Receiver<FeatureProcessed>, // Future
     rx_spt_feature: mpsc::Receiver<FeatureProcessed>, // Spot
-    fut_bar: Bar,
-    spt_bar: Bar,
+    fut_bar: BarManager,
+    spt_bar: BarManager,
 
     // Trade Computer
     trade_computer: TradeComputer,
@@ -279,8 +271,8 @@ impl PrismTradeManager {
             rx_fut_feature,
             rx_spt_feature,
 
-            fut_bar: Bar::new(100),
-            spt_bar: Bar::new(100),
+            fut_bar: BarManager::new(100),
+            spt_bar: BarManager::new(100),
             trade_computer: TradeComputer::new(),
             tx_fut_db,
             tx_spt_db,
