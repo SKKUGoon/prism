@@ -82,15 +82,19 @@ struct TradeComputer {
 
     future_volume_imbalance: Option<f32>,
     future_volume_imbalance_thres: Option<f32>,
+    future_volume_cvd: Option<f32>,
     spot_volume_imbalance: Option<f32>,
     spot_volume_imbalance_thres: Option<f32>,
+    spot_volume_cvd: Option<f32>,
     historical_future_volume_imbalance: Vec<f32>, // Within the bar
     historical_spot_volume_imbalance: Vec<f32>,   // Within the bar
 
     future_dollar_imbalance: Option<f32>,
     future_dollar_imbalance_thres: Option<f32>,
+    future_dollar_cvd: Option<f32>,
     spot_dollar_imbalance: Option<f32>,
     spot_dollar_imbalance_thres: Option<f32>,
+    spot_dollar_cvd: Option<f32>,
     historical_future_dollar_imbalance: Vec<f32>, // Within the bar
     historical_spot_dollar_imbalance: Vec<f32>,   // Within the bar
 }
@@ -141,15 +145,19 @@ impl TradeComputer {
 
             future_volume_imbalance: None,
             future_volume_imbalance_thres: None,
+            future_volume_cvd: None,
             spot_volume_imbalance: None,
             spot_volume_imbalance_thres: None,
+            spot_volume_cvd: None,
             historical_future_volume_imbalance: Vec::new(),
             historical_spot_volume_imbalance: Vec::new(),
 
             future_dollar_imbalance: None,
             future_dollar_imbalance_thres: None,
+            future_dollar_cvd: None,
             spot_dollar_imbalance: None,
             spot_dollar_imbalance_thres: None,
+            spot_dollar_cvd: None,
             historical_future_dollar_imbalance: Vec::new(),
             historical_spot_dollar_imbalance: Vec::new(),
         }
@@ -185,6 +193,9 @@ impl TradeComputer {
                 self.future_volume_imbalance = Some(data.volume_imbalance);
                 self.future_dollar_imbalance = Some(data.dollar_imbalance);
 
+                self.future_volume_cvd = Some(data.volume_imbalance_bar.cvd);
+                self.future_dollar_cvd = Some(data.dollar_imbalance_bar.cvd);
+
                 self.historical_future_tick_vwap
                     .push_back(data.tick_imbalance_vwap);
                 self.historical_future_volume_vwap
@@ -212,6 +223,9 @@ impl TradeComputer {
                 self.spot_tick_imbalance = Some(data.tick_imbalance);
                 self.spot_volume_imbalance = Some(data.volume_imbalance);
                 self.spot_dollar_imbalance = Some(data.dollar_imbalance);
+
+                self.spot_volume_cvd = Some(data.volume_imbalance_bar.cvd);
+                self.spot_dollar_cvd = Some(data.dollar_imbalance_bar.cvd);
 
                 self.historical_spot_tick_vwap
                     .push_back(data.tick_imbalance_vwap);
@@ -283,15 +297,21 @@ impl PrismTradeManager {
         loop {
             tokio::select! {
                 Some(feature) = self.rx_fut_feature.recv() => {
+                    let start = std::time::Instant::now();
+
+                    // Time the method operation
                     self.trade_computer.update_future_bars(&feature);
                     self.trade_computer.update_trade_params(&feature, AssetSource::Future);
 
-                    debug!(
-                        "from trade to event : {:?}ms | from event to processed : {:?}ms",
-                        feature.event_time.saturating_sub(feature.trade_time),
-                        feature.processed_time.saturating_sub(feature.event_time)
-                    );
+                    let elapsed = start.elapsed();
 
+                    debug!(
+                        "from trade to event : {:?}ms | from event to processed : {:?}ms | from processed to update: {:?}ms",
+                        feature.event_time.saturating_sub(feature.trade_time),
+                        feature.processed_time.saturating_sub(feature.event_time),
+                        elapsed
+                    );
+                    println!("check {:?} {:?}", feature.volume_imbalance_thres, feature.volume_imbalance);
                     if self.config.data_dump {
                         self.tx_fut_db.send(feature).await.unwrap();
                     }

@@ -15,68 +15,99 @@ pub struct StreamProcessor {
     // Send data to Executor
     tx_feature: Sender<FeatureProcessed>,
 
-    // Feature + Feature Temporary
     // During the bar creating process, always reset the feature in progress after bar creation
     // Feature processed should not be reset
-    fip: FeatureInProgress, // Feature in progress
-    fpd: FeatureProcessed,  // Feature processed
+
+    // Feature in progress
+    fip: FeatureInProgress,
+    // Feature processed
+    fpd: FeatureProcessed,
 }
 
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
 pub struct FeatureProcessed {
+    // When the websocket event is received
     pub event_time: u64,
+    // When the feature is processed
     pub processed_time: u64,
+    // When the trade is executed
     pub trade_time: u64,
 
+    // f for Future, s for Spot
     pub source: String,
 
     pub price: f32,
     pub maker_quantity: f32,
     pub taker_quantity: f32,
 
-    pub ob_spread: f32,        // Best ask - best bid
-    pub obi: f32,              // Orderbook imbalance
-    pub obi_range: (f32, f32), // Ranged Orderbook imbalance
+    // Best ask - best bid
+    pub ob_spread: f32,
+    // Orderbook imbalance
+    pub obi: f32,
+    // Ranged Orderbook imbalance
+    pub obi_range: (f32, f32),
 
-    // Processed Bars (old one for the queue)
+    // Latest processed tick imbalance bar (Historical)
     pub tick_imbalance_bar: TickImbalanceBar,
+    // Latest processed volume imbalance bar (Historical)
     pub volume_imbalance_bar: VolumeImbalanceBar,
+    // Latest processed dollar imbalance bar (Historical)
     pub dollar_imbalance_bar: DollarImbalanceBar,
 
-    // Real time information
+    // Real time tick imbalance information
     pub tick_imbalance: f32,
-    pub volume_imbalance: f32,
-    pub dollar_imbalance: f32,
-
+    // Real time tick imbalance threshold
     pub tick_imbalance_thres: f32,
-    pub volume_imbalance_thres: f32,
-    pub dollar_imbalance_thres: f32,
-
+    // Real time tick imbalance VWAP
     pub tick_imbalance_vwap: f32,
-    pub volume_imbalance_vwap: f32,
-    pub dollar_imbalance_vwap: f32,
 
-    tick_imbalance_bar_init: bool,
-    volume_imbalance_bar_init: bool,
-    dollar_imbalance_bar_init: bool,
+    // Real time volume imbalance information
+    pub volume_imbalance: f32,
+    // Real time volume imbalance threshold
+    pub volume_imbalance_thres: f32,
+    // Real time volume imbalance VWAP
+    pub volume_imbalance_vwap: f32,
+    // Real time volume imbalance CVD
+    pub volume_imbalance_cvd: f32,
+
+    // Real time dollar imbalance information
+    pub dollar_imbalance: f32,
+    // Real time dollar imbalance threshold
+    pub dollar_imbalance_thres: f32,
+    // Real time dollar imbalance VWAP
+    pub dollar_imbalance_vwap: f32,
+    // Real time dollar imbalance CVD
+    pub dollar_imbalance_cvd: f32,
+
+    // Whether the genesis tick imbalance bar has been created
+    pub tick_imbalance_bar_init: bool,
+    // Whether the genesis volume imbalance bar has been created
+    pub volume_imbalance_bar_init: bool,
+    // Whether the genesis dollar imbalance bar has been created
+    pub dollar_imbalance_bar_init: bool,
 }
 
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
 struct FeatureInProgress {
-    // Time
+    // When the trade is executed
     trade_time: u64,
+    // When the websocket event is received
     event_time: u64,
+    // When the feature is processed
     processing_time: u64,
 
     pub tick_imbalance_bar: TickImbalanceBar,
     pub volume_imbalance_bar: VolumeImbalanceBar,
     pub dollar_imbalance_bar: DollarImbalanceBar,
 
-    tick_imbalance_bar_init: bool,
-    volume_imbalance_bar_init: bool,
-    dollar_imbalance_bar_init: bool,
+    // Whether the genesis tick imbalance bar has been created
+    pub tick_imbalance_bar_init: bool,
+    // Whether the genesis volume imbalance bar has been created
+    pub volume_imbalance_bar_init: bool,
+    // Whether the genesis dollar imbalance bar has been created
+    pub dollar_imbalance_bar_init: bool,
 }
 
 #[allow(dead_code)]
@@ -140,12 +171,14 @@ impl StreamProcessor {
                 volume_imbalance: 0.0,
                 volume_imbalance_vwap: 0.0,
                 volume_imbalance_thres: 0.0,
+                volume_imbalance_cvd: 0.0,
 
                 dollar_imbalance_bar: DollarImbalanceBar::new(),
                 dollar_imbalance_bar_init: false,
                 dollar_imbalance: 0.0,
                 dollar_imbalance_vwap: 0.0,
                 dollar_imbalance_thres: 0.0,
+                dollar_imbalance_cvd: 0.0,
             },
         }
     }
@@ -155,6 +188,7 @@ impl StreamProcessor {
         self.fpd.dollar_imbalance_vwap = self.fip.dollar_imbalance_bar.bar.vwap;
         self.fpd.dollar_imbalance = self.fip.dollar_imbalance_bar.bar.imb;
         self.fpd.dollar_imbalance_thres = self.fip.dollar_imbalance_bar.bar.imb_thres;
+        self.fpd.dollar_imbalance_cvd = self.fip.dollar_imbalance_bar.cvd;
 
         if self.fip.dollar_imbalance_bar_init {
             if let Some(db) = self.fip.dollar_imbalance_bar.bar(mkt_data) {
@@ -182,6 +216,7 @@ impl StreamProcessor {
         self.fpd.volume_imbalance_vwap = self.fip.volume_imbalance_bar.bar.vwap;
         self.fpd.volume_imbalance = self.fip.volume_imbalance_bar.bar.imb;
         self.fpd.volume_imbalance_thres = self.fip.volume_imbalance_bar.bar.imb_thres;
+        self.fpd.volume_imbalance_cvd = self.fip.volume_imbalance_bar.cvd;
 
         if self.fip.volume_imbalance_bar_init {
             if let Some(vb) = self.fip.volume_imbalance_bar.bar(mkt_data) {

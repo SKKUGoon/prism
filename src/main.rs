@@ -10,7 +10,6 @@ use crate::data::{
     stream::StreamHandler,
 };
 use database::postgres::timescale_batch_writer;
-// use database::postgres::timescale_batch_writer;
 use log::{error, info, warn};
 use prism::{
     executor::{PrismConfig, PrismTradeManager},
@@ -95,7 +94,7 @@ async fn main() {
     /* Trade Engine Start */
     let mut core_config = PrismConfig::default();
     core_config.enable_data_dump();
-    // let core_config = PrismConfig::default();  // For testing
+    // let core_config = PrismConfig::default(); // For testing
 
     let mut core =
         PrismTradeManager::new(core_config, rx_fut_exec, rx_spt_exec, tx_fut_db, tx_spt_db);

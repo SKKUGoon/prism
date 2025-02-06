@@ -8,8 +8,8 @@ create table binance.features_xrpusdt_future3 (
     maker_quantity FLOAT4 not null,
     taker_quantity FLOAT4 not null,
     obi FLOAT4 not null,
-    ob_spread FLOAT4 not null,
     obi_005p FLOAT4 not null,
+    ob_spread FLOAT4 not null,
     
     tib_id_hist text not null,
     tib_imb_hist FLOAT4 not null,
@@ -28,25 +28,7 @@ create table binance.features_xrpusdt_future3 (
     vmb_imb_curr FLOAT4 not null,
     vmb_thres_curr FLOAT4 not null,
     vmb_vwap_curr FLOAT4 not null,
-    
-    vmm_id_hist text not null,
-    vmm_imb_hist FLOAT4 not null,
-    vmm_thres_hist FLOAT4 not null,
-    vmm_aggr_hist FLOAT4 not null,
-    vmm_aggr_v_hist FLOAT4 not null,
-    vmm_imb_curr FLOAT4 not null,
-    vmm_thres_curr FLOAT4 not null,
-    vmm_vwap_curr FLOAT4 not null,
-    
-    vmt_id_hist text not null,
-    vmt_imb_hist FLOAT4 not null,
-    vmt_thres_hist FLOAT4 not null,
-    vmt_aggr_hist FLOAT4 not null,
-    vmt_aggr_v_hist FLOAT4 not null,
-    vmt_imb_curr FLOAT4 not null,
-    vmt_thres_curr FLOAT4 not null,
-    vmt_vwap_curr FLOAT4 not null,
-    
+    vmb_cvd_curr FLOAT4 not null,
     dib_id_hist text not null,
     dib_imb_hist FLOAT4 not null,
     dib_thres_hist FLOAT4 not null,
@@ -54,7 +36,8 @@ create table binance.features_xrpusdt_future3 (
     dib_aggr_v_hist FLOAT4 not null,
     dib_imb_curr FLOAT4 not null,
     dib_thres_curr FLOAT4 not null,
-    dib_vwap_curr FLOAT4 not null
+    dib_vwap_curr FLOAT4 not null,
+    dib_cvd_curr FLOAT4 not null
 );
 
 select create_hypertable('binance.features_xrpusdt_future3', 'time');
@@ -87,24 +70,7 @@ create table binance.features_xrpusdt_spot3 (
     vmb_imb_curr FLOAT4 not null,
     vmb_thres_curr FLOAT4 not null,
     vmb_vwap_curr FLOAT4 not null,
-    
-    vmm_id_hist text not null,
-    vmm_imb_hist FLOAT4 not null,
-    vmm_thres_hist FLOAT4 not null,
-    vmm_aggr_hist FLOAT4 not null,
-    vmm_aggr_v_hist FLOAT4 not null,
-    vmm_imb_curr FLOAT4 not null,
-    vmm_thres_curr FLOAT4 not null,
-    vmm_vwap_curr FLOAT4 not null,
-    
-    vmt_id_hist text not null,
-    vmt_imb_hist FLOAT4 not null,
-    vmt_thres_hist FLOAT4 not null,
-    vmt_aggr_hist FLOAT4 not null,
-    vmt_aggr_v_hist FLOAT4 not null,
-    vmt_imb_curr FLOAT4 not null,
-    vmt_thres_curr FLOAT4 not null,
-    vmt_vwap_curr FLOAT4 not null,
+    vmb_cvd_curr FLOAT4 not null,
     
     dib_id_hist text not null,
     dib_imb_hist FLOAT4 not null,
@@ -113,7 +79,8 @@ create table binance.features_xrpusdt_spot3 (
     dib_aggr_v_hist FLOAT4 not null,
     dib_imb_curr FLOAT4 not null,
     dib_thres_curr FLOAT4 not null,
-    dib_vwap_curr FLOAT4 not null
+    dib_vwap_curr FLOAT4 not null,
+    dib_cvd_curr FLOAT4 not null
 );
 
 select create_hypertable('binance.features_xrpusdt_spot3', 'time');
