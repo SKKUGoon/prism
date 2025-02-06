@@ -311,7 +311,7 @@ impl PrismTradeManager {
                         feature.processed_time.saturating_sub(feature.event_time),
                         elapsed
                     );
-                    println!("check {:?} {:?}", feature.volume_imbalance_thres, feature.volume_imbalance);
+
                     if self.config.data_dump {
                         self.tx_fut_db.send(feature).await.unwrap();
                     }
