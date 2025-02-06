@@ -69,6 +69,30 @@ impl DollarImbalanceBar {
         }
     }
 
+    pub fn aggressive(&self) -> f32 {
+        if let (Some(ts), Some(te)) = (self.ts, self.te) {
+            if te - ts > 0 {
+                self.tsize as f32 / (te - ts) as f32
+            } else {
+                0.0
+            }
+        } else {
+            0.0
+        }
+    }
+
+    pub fn aggressive_vol(&self) -> f32 {
+        if let (Some(ts), Some(te)) = (self.ts, self.te) {
+            if te - ts > 0 {
+                (self.tsize as f32 * self.cum_price_volume) / (te - ts) as f32
+            } else {
+                0.0
+            }
+        } else {
+            0.0
+        }
+    }
+
     pub fn genesis_bar(&mut self, mkt_data: &MarketData) -> Option<DollarImbalanceBar> {
         match self.ts {
             Some(ts) => {

@@ -186,8 +186,8 @@ impl TradeComputer {
             AssetSource::Future => {
                 self.future_price = Some(data.price);
                 self.future_tick_vwap = Some(data.tick_imbalance_vwap);
-                self.future_volume_vwap = Some(data.volume_imbalance_vwap_both);
-                self.future_dollar_vwap = Some(data.dollar_imbalance_vwap_both);
+                self.future_volume_vwap = Some(data.volume_imbalance_both_vwap);
+                self.future_dollar_vwap = Some(data.dollar_imbalance_both_vwap);
 
                 self.future_tick_imbalance = Some(data.tick_imbalance);
                 self.future_volume_imbalance = Some(data.volume_imbalance_both);
@@ -196,9 +196,9 @@ impl TradeComputer {
                 self.historical_future_tick_vwap
                     .push_back(data.tick_imbalance_vwap);
                 self.historical_future_volume_vwap
-                    .push_back(data.volume_imbalance_vwap_both);
+                    .push_back(data.volume_imbalance_both_vwap);
                 self.historical_future_dollar_vwap
-                    .push_back(data.dollar_imbalance_vwap_both);
+                    .push_back(data.dollar_imbalance_both_vwap);
 
                 self.future_tick_imbalance_thres = Some(data.tick_imbalance_thres);
                 self.future_volume_imbalance_thres = Some(data.volume_imbalance_both_thres);
@@ -214,8 +214,8 @@ impl TradeComputer {
             AssetSource::Spot => {
                 self.spot_price = Some(data.price);
                 self.spot_tick_vwap = Some(data.tick_imbalance_vwap);
-                self.spot_volume_vwap = Some(data.volume_imbalance_vwap_both);
-                self.spot_dollar_vwap = Some(data.dollar_imbalance_vwap_both);
+                self.spot_volume_vwap = Some(data.volume_imbalance_both_vwap);
+                self.spot_dollar_vwap = Some(data.dollar_imbalance_both_vwap);
 
                 self.spot_tick_imbalance = Some(data.tick_imbalance);
                 self.spot_volume_imbalance = Some(data.volume_imbalance_both);
@@ -224,9 +224,9 @@ impl TradeComputer {
                 self.historical_spot_tick_vwap
                     .push_back(data.tick_imbalance_vwap);
                 self.historical_spot_volume_vwap
-                    .push_back(data.volume_imbalance_vwap_both);
+                    .push_back(data.volume_imbalance_both_vwap);
                 self.historical_spot_dollar_vwap
-                    .push_back(data.dollar_imbalance_vwap_both);
+                    .push_back(data.dollar_imbalance_both_vwap);
 
                 self.spot_tick_imbalance_thres = Some(data.tick_imbalance_thres);
                 self.spot_volume_imbalance_thres = Some(data.volume_imbalance_both_thres);
