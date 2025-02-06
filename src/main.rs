@@ -12,8 +12,9 @@ use crate::data::{
 // use database::postgres::timescale_batch_writer;
 use log::{error, info, warn};
 use prism::{
-    engine::{PrismFeatureEngine, PrismaSource},
-    executor::{Prism, PrismConfig},
+    executor::{PrismConfig, PrismTradeManager},
+    stream_process::StreamProcessor,
+    AssetSource,
 };
 use std::env;
 use tokio::{signal, sync::mpsc};
@@ -77,14 +78,14 @@ async fn main() {
     );
 
     /* Feature Creation Engine Start */
-    let mut fut_engine = PrismFeatureEngine::new(
-        PrismaSource::Future,
+    let mut fut_engine = StreamProcessor::new(
+        AssetSource::Future,
         rx_fut_ob_prism,
         rx_fut_agg_prism,
         tx_fut_exec,
     );
-    let mut spt_engine = PrismFeatureEngine::new(
-        PrismaSource::Spot,
+    let mut spt_engine = StreamProcessor::new(
+        AssetSource::Spot,
         rx_spt_ob_prism,
         rx_spt_agg_prism,
         tx_spt_exec,
@@ -96,7 +97,8 @@ async fn main() {
 
     let core_config = PrismConfig::default();
 
-    let mut core = Prism::new(core_config, rx_fut_exec, rx_spt_exec, tx_fut_db, tx_spt_db);
+    let mut core =
+        PrismTradeManager::new(core_config, rx_fut_exec, rx_spt_exec, tx_fut_db, tx_spt_db);
 
     // Create a JoinSet to manage all spawned tasks
     let mut tasks = tokio::task::JoinSet::new();
