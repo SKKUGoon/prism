@@ -149,7 +149,7 @@ async fn batch_insert_into_timescale(
         values.push(Box::new(feature.dollar_imbalance_bar_both.imb_thres)); // dib_thres
         values.push(Box::new(feature.dollar_imbalance_vwap_both)); // dib_vwap
 
-        param_index += 25;
+        param_index += 28;
     }
 
     let combined_data = placeholders.join(",");
