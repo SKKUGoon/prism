@@ -55,6 +55,7 @@ impl Bar {
     }
 
     pub fn aggressive(&self) -> f32 {
+        // Total amount of ticks / Duration to create the bar
         if let (Some(ts), Some(te)) = (self.ts, self.te) {
             if te - ts > 0 {
                 self.tsize as f32 / (te - ts) as f32
@@ -67,6 +68,8 @@ impl Bar {
     }
 
     pub fn aggressive_vol(&self) -> f32 {
+        // Total amount of ticks * Cumul Product of price and volume / Duration to create the bar
+        // Identifies false transactions (small but frequency transaction signals)
         if let (Some(ts), Some(te)) = (self.ts, self.te) {
             if te - ts > 0 {
                 (self.tsize as f32 * self.cum_price_volume) / (te - ts) as f32
@@ -118,7 +121,9 @@ pub trait BarImpl: Sized {
     fn threshold_count(&self) -> usize;
 }
 
-const TICK_IMBALANCE_BAR_THRESHOLD_COUNT: usize = 50;
+pub trait VolumeDelta {
+    fn calculate_cvd(&mut self, mkt_data: &MarketData, prev_price: f32);
+}
 
 // Re-export specific bar types
 pub mod dollar_imbalance;

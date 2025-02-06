@@ -1,14 +1,18 @@
 use crate::data::market::binance_aggtrade_future::MarketData;
-use crate::prism::bar::{Bar, BarImpl};
+use crate::prism::bar::{Bar, BarImpl, VolumeDelta};
 
 #[derive(Debug, Clone)]
 pub struct DollarImbalanceBar {
     pub bar: Bar,
+    pub cvd: f32,
 }
 
 impl DollarImbalanceBar {
     pub fn new() -> Self {
-        Self { bar: Bar::new() }
+        Self {
+            bar: Bar::new(),
+            cvd: 0.0,
+        }
     }
 
     pub fn genesis_bar(&mut self, mkt_data: &MarketData) -> Option<Self> {
@@ -31,6 +35,9 @@ impl DollarImbalanceBar {
 
                 // Update VWAP
                 self.bar.update_vwap(mkt_data);
+
+                // Update CVD
+                self.calculate_cvd(mkt_data, prev_price);
 
                 if let Some(te) = self.bar.te {
                     if (te - ts >= self.bar.genesis_collect_period)
@@ -79,6 +86,9 @@ impl DollarImbalanceBar {
 
                 // Update VWAP
                 self.bar.update_vwap(mkt_data);
+
+                // Update CVD
+                self.calculate_cvd(mkt_data, prev_price);
 
                 // Update existing bar
                 self.bar.te = Some(mkt_data.trade_time);
@@ -170,5 +180,18 @@ impl BarImpl for DollarImbalanceBar {
 
     fn threshold_count(&self) -> usize {
         50
+    }
+}
+
+impl VolumeDelta for DollarImbalanceBar {
+    fn calculate_cvd(&mut self, mkt_data: &MarketData, prev_price: f32) {
+        let price_change = mkt_data.price - prev_price;
+        let tick_imbalance = match price_change.total_cmp(&0.0) {
+            std::cmp::Ordering::Greater => 1.0,
+            std::cmp::Ordering::Less => -1.0,
+            std::cmp::Ordering::Equal => 0.0,
+        };
+
+        self.cvd += tick_imbalance * mkt_data.quantity * mkt_data.price
     }
 }
