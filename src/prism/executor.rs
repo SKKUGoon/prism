@@ -1,8 +1,8 @@
-use std::collections::VecDeque;
-
 use crate::prism::bar_manager::Bar;
 use crate::prism::stream_process::FeatureProcessed;
 use crate::prism::AssetSource;
+use log::debug;
+use std::collections::VecDeque;
 use tokio::sync::mpsc;
 
 #[derive(Debug)]
@@ -294,12 +294,11 @@ impl PrismTradeManager {
                     self.trade_computer.update_future_bars(&feature);
                     self.trade_computer.update_trade_params(&feature, AssetSource::Future);
 
-                    println!(
+                    debug!(
                         "from trade to event : {:?}ms | from event to processed : {:?}ms",
                         feature.event_time.saturating_sub(feature.trade_time),
-                        feature.processed_time.saturating_sub(feature.event_time),
+                        feature.processed_time.saturating_sub(feature.event_time)
                     );
-                    println!("--------------------------------");
 
                     if self.config.data_dump {
                         self.tx_fut_db.send(feature).await.unwrap();
