@@ -9,6 +9,7 @@ use crate::data::{
     },
     stream::StreamHandler,
 };
+use database::postgres::timescale_batch_writer;
 // use database::postgres::timescale_batch_writer;
 use log::{error, info, warn};
 use prism::{
@@ -28,8 +29,8 @@ mod trade;
 async fn main() {
     env_logger::init();
     let symbol = env::var("SYMBOLS").unwrap_or_else(|_| "xrpusdt".to_string());
-    // let table_fut = env::var("TABLE_FUT").unwrap_or_else(|_| "feature_xrpusdt_future".to_string());
-    // let table_spt = env::var("TABLE_SPT").unwrap_or_else(|_| "feature_xrpusdt_spot".to_string());
+    let table_fut = env::var("TABLE_FUT").unwrap_or_else(|_| "feature_xrpusdt_future".to_string());
+    let table_spt = env::var("TABLE_SPT").unwrap_or_else(|_| "feature_xrpusdt_spot".to_string());
 
     /*
     Create Channels
@@ -92,10 +93,9 @@ async fn main() {
     );
 
     /* Trade Engine Start */
-    // let mut core_config = PrismConfig::default();
-    // core_config.enable_data_dump();
-
-    let core_config = PrismConfig::default();
+    let mut core_config = PrismConfig::default();
+    core_config.enable_data_dump();
+    // let core_config = PrismConfig::default();  // For testing
 
     let mut core =
         PrismTradeManager::new(core_config, rx_fut_exec, rx_spt_exec, tx_fut_db, tx_spt_db);
@@ -109,17 +109,17 @@ async fn main() {
     tasks.spawn(async move { core.work().await });
 
     /* Timescale Insertion */
-    // tasks.spawn(async move {
-    //     if let Err(e) = timescale_batch_writer("binance", &table_fut, rx_fut_db).await {
-    //         error!("Timescale batch writer error: {}", e);
-    //     }
-    // });
+    tasks.spawn(async move {
+        if let Err(e) = timescale_batch_writer("binance", &table_fut, rx_fut_db).await {
+            error!("Timescale batch writer error: {}", e);
+        }
+    });
 
-    // tasks.spawn(async move {
-    //     if let Err(e) = timescale_batch_writer("binance", &table_spt, rx_spt_db).await {
-    //         error!("Timescale batch writer error: {}", e);
-    //     }
-    // });
+    tasks.spawn(async move {
+        if let Err(e) = timescale_batch_writer("binance", &table_spt, rx_spt_db).await {
+            error!("Timescale batch writer error: {}", e);
+        }
+    });
 
     /* Price Feed */
     // Future

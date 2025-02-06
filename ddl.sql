@@ -1,79 +1,83 @@
 create schema binance;
 
 -- XRPUSDT
-create table binance.features_xrpusdt_future2 (
+create table binance.features_xrpusdt_future3 (
     time TIMESTAMP not null,
     source text not null,
     price FLOAT4 not null,
     maker_quantity FLOAT4 not null,
     taker_quantity FLOAT4 not null,
     obi FLOAT4 not null,
-    
+    ob_spread FLOAT4 not null,
     obi_005p FLOAT4 not null,
-    obi_01p FLOAT4 not null,
-    obi_02p FLOAT4 not null,
-    obi_05p FLOAT4 not null,
     
     tib_id text not null,
     tib_imb FLOAT4 not null,
     tib_thres FLOAT4 not null,
+    tib_vwap FLOAT4 not null,
     
     vmb_id text not null,
     vmb_imb FLOAT4 not null,
     vmb_thres FLOAT4 not null,
+    vmb_vwap FLOAT4 not null,
     
     vmm_id text not null,
     vmm_imb FLOAT4 not null,
     vmm_thres FLOAT4 not null,
+    vmm_vwap FLOAT4 not null,
     
     vmt_id text not null,
     vmt_imb FLOAT4 not null,
     vmt_thres FLOAT4 not null,
+    vmt_vwap FLOAT4 not null,
     
     dib_id text not null,
     dib_imb FLOAT4 not null,
-    dib_thres FLOAT4 not null
+    dib_thres FLOAT4 not null,
+    dib_vwap FLOAT4 not null
 );
 
-select create_hypertable('binance.features_xrpusdt_future2', 'time');
-select add_retention_policy('binance.features_xrpusdt_future2', INTERVAL '3 days');
+select create_hypertable('binance.features_xrpusdt_future3', 'time');
+select add_retention_policy('binance.features_xrpusdt_future3', INTERVAL '3 days');
 
-create table binance.features_xrpusdt_spot2 (
+create table binance.features_xrpusdt_spot3 (
     time TIMESTAMP not null,
     source text not null,
     price FLOAT4 not null,
     maker_quantity FLOAT4 not null,
     taker_quantity FLOAT4 not null,
     obi FLOAT4 not null,
-    
+    ob_spread FLOAT4 not null,  
     obi_005p FLOAT4 not null,
-    obi_01p FLOAT4 not null,
-    obi_02p FLOAT4 not null,
-    obi_05p FLOAT4 not null,
     
     tib_id text not null,
     tib_imb FLOAT4 not null,
     tib_thres FLOAT4 not null,
+    tib_vwap FLOAT4 not null,
     
     vmb_id text not null,
     vmb_imb FLOAT4 not null,
     vmb_thres FLOAT4 not null,
+    vmb_vwap FLOAT4 not null,
     
     vmm_id text not null,
     vmm_imb FLOAT4 not null,
     vmm_thres FLOAT4 not null,
+    vmm_vwap FLOAT4 not null,
     
     vmt_id text not null,
     vmt_imb FLOAT4 not null,
     vmt_thres FLOAT4 not null,
+    vmt_vwap FLOAT4 not null,
     
     dib_id text not null,
     dib_imb FLOAT4 not null,
-    dib_thres FLOAT4 not null
+    dib_thres FLOAT4 not null,
+    dib_vwap FLOAT4 not null
 );
 
-select create_hypertable('binance.features_xrpusdt_spot2', 'time');
-select add_retention_policy('binance.features_xrpusdt_spot2', INTERVAL '3 days');
+select create_hypertable('binance.features_xrpusdt_spot3', 'time');
+select add_retention_policy('binance.features_xrpusdt_spot3', INTERVAL '3 days');
 
 -- BTCUSDT
 -- create table binance.features_btcusdt_future (
