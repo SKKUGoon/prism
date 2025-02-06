@@ -98,7 +98,7 @@ impl VolumeImbalanceBar {
                 self.update_vwap(mkt_data);
 
                 // Update existing bar
-                self.te = Some(mkt_data.time);
+                self.te = Some(mkt_data.trade_time);
                 self.pc = Some(mkt_data.price);
                 self.ph = Some(self.ph.unwrap().max(mkt_data.price));
                 self.pl = Some(self.pl.unwrap().min(mkt_data.price));
@@ -127,8 +127,8 @@ impl VolumeImbalanceBar {
 
             None => {
                 // Create new bar
-                self.ts = Some(mkt_data.time);
-                self.te = Some(mkt_data.time);
+                self.ts = Some(mkt_data.trade_time);
+                self.te = Some(mkt_data.trade_time);
                 self.po = Some(mkt_data.price);
                 self.ph = Some(mkt_data.price);
                 self.pl = Some(mkt_data.price);
@@ -189,7 +189,7 @@ impl VolumeImbalanceBar {
                 self.update_vwap(mkt_data);
 
                 // Update existing bar
-                self.te = Some(mkt_data.time);
+                self.te = Some(mkt_data.trade_time);
                 self.pc = Some(mkt_data.price);
                 self.ph = Some(self.ph.unwrap().max(mkt_data.price));
                 self.pl = Some(self.pl.unwrap().min(mkt_data.price));
@@ -241,8 +241,8 @@ impl VolumeImbalanceBar {
             }
             None => {
                 // Start of new bar
-                self.ts = Some(mkt_data.time);
-                self.te = Some(mkt_data.time);
+                self.ts = Some(mkt_data.trade_time);
+                self.te = Some(mkt_data.trade_time);
                 self.po = Some(mkt_data.price);
                 self.ph = Some(mkt_data.price);
                 self.pl = Some(mkt_data.price);

@@ -73,11 +73,6 @@ impl Bar {
             }
         }
         self.tick_imbalance_bar_queue.push_back(bar.clone());
-        log::info!(
-            "Tick imbalance bar updated: VWAP vs Price: {:?} vs {:?}",
-            bar.vwap,
-            bar.pc, // Always use the closing price
-        );
     }
 
     pub fn update_volume_imbalance_bar(&mut self, bar: &VolumeImbalanceBar) {
