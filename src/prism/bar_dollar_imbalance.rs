@@ -1,5 +1,4 @@
 use crate::data::market::binance_aggtrade_future::MarketData;
-use log::debug;
 use std::collections::VecDeque;
 
 #[derive(Debug, Clone)]
@@ -119,7 +118,6 @@ impl DollarImbalanceBar {
                         self.historical_threshold.push_back(threshold);
                         self.imb_thres = self.threshold_decay(threshold);
 
-                        debug!("Genesis Volume Imbalance Bar Created");
                         return Some(self.clone());
                     }
                 }
@@ -209,13 +207,6 @@ impl DollarImbalanceBar {
                     * 0.5;
 
                 threshold = threshold.min(threshold_max).max(threshold_min);
-
-                debug!(
-                    "Volume Imbalance Bar: thres: {:?} decay: {:?} | imb: {:?}",
-                    threshold,
-                    self.threshold_decay(threshold),
-                    self.imb
-                );
 
                 if self.imb.abs() >= self.threshold_decay(threshold) {
                     // Record new EWMA

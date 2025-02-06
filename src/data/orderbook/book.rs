@@ -1,8 +1,6 @@
 use std::collections::HashMap;
 use tokio::sync::mpsc::{Receiver, Sender};
 
-use log::debug;
-
 #[derive(Debug)]
 #[allow(dead_code)]
 pub struct Orderbook {
@@ -19,8 +17,8 @@ pub struct Orderbook {
 
 #[derive(Debug, Clone)]
 pub struct OrderbookData {
-    best_bid: (String, String),
-    best_ask: (String, String),
+    pub best_bid: (String, String),
+    pub best_ask: (String, String),
 
     pub bids: HashMap<String, String>, // key: price, value: order id
     pub asks: HashMap<String, String>, // key: price, value: order id
@@ -72,16 +70,7 @@ impl Orderbook {
             if let Err(e) = self.tx.send(data).await {
                 log::error!("Error sending orderbook data to prism: {}", e);
             }
-
-            self.display();
         }
-    }
-
-    pub fn display(&self) {
-        debug!(
-            "Time: {} | Source: {}",
-            self.trade_time, self.last_update_exchange
-        );
     }
 
     pub fn update(&mut self, update: OrderbookUpdateStream) {

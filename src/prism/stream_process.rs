@@ -6,6 +6,7 @@ use crate::prism::bar_volume_imbalance::{VolumeImbalanceBar, VolumeType};
 use crate::prism::AssetSource;
 use core::f32;
 use log::error;
+use std::time::{SystemTime, UNIX_EPOCH};
 use tokio::sync::mpsc::{Receiver, Sender};
 
 pub struct StreamProcessor {
@@ -26,13 +27,17 @@ pub struct StreamProcessor {
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
 pub struct FeatureProcessed {
-    pub feature_time: u64,
+    pub event_time: u64,
+    pub processed_time: u64,
+    pub trade_time: u64,
+
     pub source: String,
 
     pub price: f32,
     pub maker_quantity: f32,
     pub taker_quantity: f32,
 
+    pub ob_spread: f32,        // Best ask - best bid
     pub obi: f32,              // Orderbook imbalance
     pub obi_range: (f32, f32), // Ranged Orderbook imbalance
 
@@ -60,7 +65,7 @@ pub struct FeatureProcessed {
     pub volume_imbalance_vwap_both: f32,
     pub volume_imbalance_vwap_maker: f32,
     pub volume_imbalance_vwap_taker: f32,
-    pub dollar_imbalance_vwap: f32,
+    pub dollar_imbalance_vwap_both: f32,
 
     tick_imbalance_bar_init: bool,
     volume_imbalance_bar_both_init: bool,
@@ -72,6 +77,11 @@ pub struct FeatureProcessed {
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
 struct FeatureInProgress {
+    // Time
+    trade_time: u64,
+    event_time: u64,
+    processing_time: u64,
+
     pub tick_imbalance_bar: TickImbalanceBar,
     pub volume_imbalance_bar_both: VolumeImbalanceBar,
     pub volume_imbalance_bar_maker: VolumeImbalanceBar,
@@ -103,6 +113,11 @@ impl StreamProcessor {
             tx_feature,
 
             fip: FeatureInProgress {
+                // Time
+                trade_time: 0,
+                event_time: 0,
+                processing_time: 0,
+
                 // Information bars
                 tick_imbalance_bar: TickImbalanceBar::new(), // Initialize single tick imbalance bar
                 tick_imbalance_bar_init: false,
@@ -121,11 +136,17 @@ impl StreamProcessor {
             },
 
             fpd: FeatureProcessed {
-                feature_time: u64::MAX,
+                // Time
+                trade_time: 0,
+                event_time: 0,
+                processed_time: 0,
+
                 source: source.as_str().to_string(),
                 price: -f32::INFINITY,
                 maker_quantity: 0.0,
                 taker_quantity: 0.0,
+
+                ob_spread: 0.0,
                 obi: -f32::INFINITY, // Should be inside -1 < obi < 1
                 obi_range: (0.0, 0.0),
 
@@ -157,7 +178,7 @@ impl StreamProcessor {
                 dollar_imbalance_bar_both: DollarImbalanceBar::new(DollarVolumeType::Both),
                 dollar_imbalance_bar_both_init: false,
                 dollar_imbalance: 0.0,
-                dollar_imbalance_vwap: 0.0,
+                dollar_imbalance_vwap_both: 0.0,
                 dollar_imbalance_thres: 0.0,
             },
         }
@@ -169,6 +190,7 @@ impl StreamProcessor {
                 self.fpd.dollar_imbalance_bar_both = db.clone();
 
                 // Reset the feature in progress
+                log::debug!("New Dollar Imbalance Bar Created");
                 self.fip.dollar_imbalance_bar_both.reset();
             }
         } else if let Some(db) = self.fip.dollar_imbalance_bar_both.genesis_bar(mkt_data) {
@@ -179,6 +201,7 @@ impl StreamProcessor {
             self.fip.dollar_imbalance_bar_both_init = true;
 
             // Reset the feature in progress
+            log::debug!("First Dollar Imbalance Bar Created");
             self.fip.dollar_imbalance_bar_both.reset();
         }
     }
@@ -189,6 +212,7 @@ impl StreamProcessor {
                 self.fpd.volume_imbalance_bar_both = vb.clone();
 
                 // Reset the feature in progress
+                log::debug!("New Volume Imbalance Bar Created");
                 self.fip.volume_imbalance_bar_both.reset();
             }
         } else if let Some(vb) = self.fip.volume_imbalance_bar_both.genesis_bar(mkt_data) {
@@ -199,6 +223,7 @@ impl StreamProcessor {
             self.fip.volume_imbalance_bar_both_init = true;
 
             // Reset the feature in progress
+            log::debug!("First Volume Imbalance Bar Created");
             self.fip.volume_imbalance_bar_both.reset();
         }
 
@@ -214,6 +239,7 @@ impl StreamProcessor {
                 self.fpd.volume_imbalance_bar_maker = vb.clone();
 
                 // Reset the feature in progress
+                log::debug!("New Volume Imbalance Bar Created");
                 self.fip.volume_imbalance_bar_maker.reset();
             }
         } else if let Some(vb) = self.fip.volume_imbalance_bar_maker.genesis_bar(mkt_data) {
@@ -224,6 +250,7 @@ impl StreamProcessor {
             self.fip.volume_imbalance_bar_maker_init = true;
 
             // Reset the feature in progress
+            log::debug!("First Volume Imbalance Bar Created");
             self.fip.volume_imbalance_bar_maker.reset();
         }
 
@@ -239,6 +266,7 @@ impl StreamProcessor {
                 self.fpd.volume_imbalance_bar_taker = vb.clone();
 
                 // Reset the feature in progress
+                log::debug!("New Volume Imbalance Bar Created");
                 self.fip.volume_imbalance_bar_taker.reset();
             }
         } else if let Some(vb) = self.fip.volume_imbalance_bar_taker.genesis_bar(mkt_data) {
@@ -249,6 +277,7 @@ impl StreamProcessor {
             self.fip.volume_imbalance_bar_taker_init = true;
 
             // Reset the feature in progress
+            log::debug!("First Volume Imbalance Bar Created");
             self.fip.volume_imbalance_bar_taker.reset();
         }
 
@@ -264,6 +293,7 @@ impl StreamProcessor {
                 self.fpd.tick_imbalance_bar = tb.clone();
 
                 // Reset the feature in progress
+                log::debug!("New Tick Imbalance Bar Created");
                 self.fip.tick_imbalance_bar.reset();
             }
         } else if let Some(tb) = self.fip.tick_imbalance_bar.genesis_bar(mkt_data) {
@@ -274,6 +304,7 @@ impl StreamProcessor {
             self.fip.tick_imbalance_bar_init = true;
 
             // Reset the feature in progress
+            log::debug!("First Tick Imbalance Bar Created");
             self.fip.tick_imbalance_bar.reset();
         }
 
@@ -305,7 +336,9 @@ impl StreamProcessor {
                     self.update_dollar_imbalance_bar_both(&fut_mkt_data);
 
                     // Update feature time
-                    self.fpd.feature_time = fut_mkt_data.trade_time;
+                    self.fpd.trade_time = fut_mkt_data.trade_time;
+                    self.fpd.event_time = fut_mkt_data.event_time;
+                    self.fpd.processed_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64;
 
                     if self.tx_feature.send(self.fpd.clone()).await.is_err() {
                         error!("Failed to send feature to executor");
@@ -319,9 +352,12 @@ impl StreamProcessor {
                 // Insert Orderbook Data
                 Some(mut fut_ob_data) = self.rx_orderbook.recv() => {
                     if self.fpd.price > 0.0 {
-                        self.fpd.feature_time = fut_ob_data.trade_time;
+                        self.fpd.trade_time = fut_ob_data.trade_time;
+                        self.fpd.event_time = fut_ob_data.event_time;
+                        self.fpd.processed_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64;
 
                         self.fpd.obi = fut_ob_data.orderbook_imbalance();
+                        self.fpd.ob_spread = fut_ob_data.best_ask.0.parse::<f32>().unwrap() - fut_ob_data.best_bid.0.parse::<f32>().unwrap();
                         fut_ob_data.update_best_bid_ask(); // Update after calculating flow imbalance
 
                         self.fpd.obi_range.0 = fut_ob_data.orderbook_imbalance_slack(self.fpd.price, 0.005);

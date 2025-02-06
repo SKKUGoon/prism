@@ -187,7 +187,7 @@ impl TradeComputer {
                 self.future_price = Some(data.price);
                 self.future_tick_vwap = Some(data.tick_imbalance_vwap);
                 self.future_volume_vwap = Some(data.volume_imbalance_vwap_both);
-                self.future_dollar_vwap = Some(data.dollar_imbalance_vwap);
+                self.future_dollar_vwap = Some(data.dollar_imbalance_vwap_both);
 
                 self.future_tick_imbalance = Some(data.tick_imbalance);
                 self.future_volume_imbalance = Some(data.volume_imbalance_both);
@@ -198,24 +198,24 @@ impl TradeComputer {
                 self.historical_future_volume_vwap
                     .push_back(data.volume_imbalance_vwap_both);
                 self.historical_future_dollar_vwap
-                    .push_back(data.dollar_imbalance_vwap);
+                    .push_back(data.dollar_imbalance_vwap_both);
 
                 self.future_tick_imbalance_thres = Some(data.tick_imbalance_thres);
                 self.future_volume_imbalance_thres = Some(data.volume_imbalance_both_thres);
                 self.future_dollar_imbalance_thres = Some(data.dollar_imbalance_thres);
 
-                self.historical_future_tick_imbalance
-                    .push(data.tick_imbalance);
-                self.historical_future_volume_imbalance
-                    .push(data.volume_imbalance_both);
-                self.historical_future_dollar_imbalance
-                    .push(data.dollar_imbalance);
+                // self.historical_future_tick_imbalance
+                //     .push(data.tick_imbalance);
+                // self.historical_future_volume_imbalance
+                //     .push(data.volume_imbalance_both);
+                // self.historical_future_dollar_imbalance
+                //     .push(data.dollar_imbalance);
             }
             AssetSource::Spot => {
                 self.spot_price = Some(data.price);
                 self.spot_tick_vwap = Some(data.tick_imbalance_vwap);
                 self.spot_volume_vwap = Some(data.volume_imbalance_vwap_both);
-                self.spot_dollar_vwap = Some(data.dollar_imbalance_vwap);
+                self.spot_dollar_vwap = Some(data.dollar_imbalance_vwap_both);
 
                 self.spot_tick_imbalance = Some(data.tick_imbalance);
                 self.spot_volume_imbalance = Some(data.volume_imbalance_both);
@@ -226,18 +226,18 @@ impl TradeComputer {
                 self.historical_spot_volume_vwap
                     .push_back(data.volume_imbalance_vwap_both);
                 self.historical_spot_dollar_vwap
-                    .push_back(data.dollar_imbalance_vwap);
+                    .push_back(data.dollar_imbalance_vwap_both);
 
                 self.spot_tick_imbalance_thres = Some(data.tick_imbalance_thres);
                 self.spot_volume_imbalance_thres = Some(data.volume_imbalance_both_thres);
                 self.spot_dollar_imbalance_thres = Some(data.dollar_imbalance_thres);
 
-                self.historical_spot_tick_imbalance
-                    .push(data.tick_imbalance);
-                self.historical_spot_volume_imbalance
-                    .push(data.volume_imbalance_both);
-                self.historical_spot_dollar_imbalance
-                    .push(data.dollar_imbalance);
+                // self.historical_spot_tick_imbalance
+                //     .push(data.tick_imbalance);
+                // self.historical_spot_volume_imbalance
+                //     .push(data.volume_imbalance_both);
+                // self.historical_spot_dollar_imbalance
+                //     .push(data.dollar_imbalance);
             }
         }
 
@@ -304,23 +304,24 @@ impl PrismTradeManager {
         loop {
             tokio::select! {
                 Some(feature) = self.rx_fut_feature.recv() => {
-                    let start = std::time::Instant::now();
-
                     self.trade_computer.update_future_bars(&feature);
                     self.trade_computer.update_trade_params(&feature, AssetSource::Future);
-                    log::debug!("Future feature processing took: {:?}", start.elapsed());
 
+                    println!(
+                        "from trade to event : {:?}ms | from event to processed : {:?}ms", 
+                        feature.event_time.saturating_sub(feature.trade_time),
+                        feature.processed_time.saturating_sub(feature.event_time),
+                    );
+                    println!("--------------------------------");
+                    
                     if self.config.data_dump {
                         self.tx_fut_db.send(feature).await.unwrap();
                     }
                 }
 
                 Some(feature) = self.rx_spt_feature.recv() => {
-                    let start = std::time::Instant::now();
-
                     self.trade_computer.update_spot_bars(&feature);
                     self.trade_computer.update_trade_params(&feature, AssetSource::Spot);
-                    log::debug!("Spot feature processing took: {:?}", start.elapsed());
 
                     if self.config.data_dump {
                         self.tx_spt_db.send(feature).await.unwrap();

@@ -1,5 +1,4 @@
 use crate::data::market::binance_aggtrade_future::MarketData;
-use log::debug;
 use std::collections::VecDeque;
 
 #[derive(Debug, Clone)]
@@ -104,7 +103,6 @@ impl TickImbalanceBar {
                         self.historical_threshold.push_back(threshold);
                         self.imb_thres = threshold;
 
-                        debug!("Genesis Tick ImbalanceBar Created");
                         return Some(self.clone());
                     }
                 }
@@ -192,13 +190,6 @@ impl TickImbalanceBar {
                     * 0.5;
 
                 threshold = threshold.min(threshold_max).max(threshold_min);
-
-                debug!(
-                    "Tick Imbalance Bar: thres: {:?} decay: {:?} | imb: {:?}",
-                    threshold,
-                    self.threshold_decay(threshold),
-                    self.imb
-                );
 
                 if self.imb.abs() >= self.threshold_decay(threshold) {
                     // Record new EWMA
