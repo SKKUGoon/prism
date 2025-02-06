@@ -2,7 +2,7 @@ use log::{error, info};
 use tokio::sync::mpsc;
 use tokio_postgres::{Client, NoTls};
 
-use crate::prism::engine::PrismaFeature;
+use crate::prism::stream_process::FeatureProcessed;
 
 #[allow(dead_code)]
 pub async fn connect_to_timescale() -> Result<Client, Box<dyn std::error::Error>> {
@@ -23,7 +23,7 @@ pub async fn connect_to_timescale() -> Result<Client, Box<dyn std::error::Error>
 pub async fn timescale_batch_writer(
     #[allow(unused_variables)] schema: &str,
     #[allow(unused_variables)] table: &str,
-    mut rx: mpsc::Receiver<PrismaFeature>,
+    mut rx: mpsc::Receiver<FeatureProcessed>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let client = connect_to_timescale().await?;
 
@@ -50,7 +50,7 @@ async fn batch_insert_into_timescale(
     schema: &str,
     table: &str,
     client: &Client,
-    features: &Vec<PrismaFeature>,
+    features: &Vec<FeatureProcessed>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     if features.is_empty() {
         return Ok(());
@@ -115,8 +115,6 @@ async fn batch_insert_into_timescale(
         values.push(Box::new(feature.obi)); // obi
         values.push(Box::new(feature.obi_range.0)); // obi_005p
         values.push(Box::new(feature.obi_range.1)); // obi_01p
-        values.push(Box::new(feature.obi_range.2)); // obi_02p
-        values.push(Box::new(feature.obi_range.3)); // obi_05p
 
         // Tick imbalance bar
         values.push(Box::new(feature.tick_imbalance_bar.id.clone())); // tib_id
