@@ -8,8 +8,8 @@ services:
     environment:
       - RUST_LOG=info
       - SYMBOLS=xrpusdt
-      - TABLE_FUT=features_xrpusdt_future2
-      - TABLE_SPT=features_xrpusdt_spot2
+      - TABLE_FUT=features_xrpusdt_future3
+      - TABLE_SPT=features_xrpusdt_spot3
     restart: unless-stopped
 
   # prism-doge:
