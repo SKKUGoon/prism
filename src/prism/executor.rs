@@ -244,19 +244,6 @@ impl TradeComputer {
         if let (Some(f), Some(s)) = (self.future_price, self.spot_price) {
             self.future_spot_divergence = Some(f - s);
         }
-
-        log::info!(
-            "TradeComputer: {{ future_price: {:?} / {:?}, spot_price: {:?} / {:?}, future_spot_divergence: {:?}, future_tick_imbalance: {:?} / {:?}, spot_tick_imbalance: {:?} / {:?} }}",
-            self.future_price,
-            self.future_tick_vwap,
-            self.spot_price,
-            self.spot_tick_vwap,
-            self.future_spot_divergence,
-            self.future_tick_imbalance,
-            self.future_tick_imbalance_thres,
-            self.spot_tick_imbalance,
-            self.spot_tick_imbalance_thres,            
-        );
     }
 }
 
@@ -308,12 +295,12 @@ impl PrismTradeManager {
                     self.trade_computer.update_trade_params(&feature, AssetSource::Future);
 
                     println!(
-                        "from trade to event : {:?}ms | from event to processed : {:?}ms", 
+                        "from trade to event : {:?}ms | from event to processed : {:?}ms",
                         feature.event_time.saturating_sub(feature.trade_time),
                         feature.processed_time.saturating_sub(feature.event_time),
                     );
                     println!("--------------------------------");
-                    
+
                     if self.config.data_dump {
                         self.tx_fut_db.send(feature).await.unwrap();
                     }

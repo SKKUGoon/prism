@@ -357,7 +357,7 @@ impl StreamProcessor {
                         self.fpd.processed_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64;
 
                         self.fpd.obi = fut_ob_data.orderbook_imbalance();
-                        self.fpd.ob_spread = fut_ob_data.best_ask.0.parse::<f32>().unwrap() - fut_ob_data.best_bid.0.parse::<f32>().unwrap();
+                        self.fpd.ob_spread = fut_ob_data.best_ask.0.parse::<f32>().unwrap_or(0.0) - fut_ob_data.best_bid.0.parse::<f32>().unwrap_or(0.0);
                         fut_ob_data.update_best_bid_ask(); // Update after calculating flow imbalance
 
                         self.fpd.obi_range.0 = fut_ob_data.orderbook_imbalance_slack(self.fpd.price, 0.005);
