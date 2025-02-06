@@ -62,20 +62,19 @@ async fn batch_insert_into_timescale(
             time, source, price, maker_quantity, taker_quantity, 
             obi, obi_005p, ob_spread,
             
-            tib_id_hist, tib_imb_hist, tib_thres_hist, tib_aggressiveness_hist, tib_aggressiveness_volume_hist, 
+            tib_id_hist, tib_imb_hist, tib_thres_hist, tib_aggr_hist, tib_aggr_v_hist, 
             tib_imb_curr, tib_thres_curr, tib_vwap_curr,
             
-            vmb_id_hist, vmb_imb_hist, vmb_thres_hist, vmb_aggressiveness_hist, vmb_aggressiveness_volume_hist,
+            vmb_id_hist, vmb_imb_hist, vmb_thres_hist, vmb_aggr_hist, vmb_aggr_v_hist,
             vmb_imb_curr, vmb_thres_curr, vmb_vwap_curr,
             
-            vmm_id_hist, vmm_imb_hist, vmm_thres_hist, vmm_aggressiveness_hist, vmm_aggressiveness_volume_hist,
+            vmm_id_hist, vmm_imb_hist, vmm_thres_hist, vmm_aggr_hist, vmm_aggr_v_hist,
             vmm_imb_curr, vmm_thres_curr, vmm_vwap_curr,
-            vmm_aggressiveness_hist, vmm_aggressiveness_volume_hist,
             
-            vmt_id_hist, vmt_imb_hist, vmt_thres_hist, vmt_aggressiveness_hist, vmt_aggressiveness_volume_hist,
+            vmt_id_hist, vmt_imb_hist, vmt_thres_hist, vmt_aggr_hist, vmt_aggr_v_hist,
             vmt_imb_curr, vmt_thres_curr, vmt_vwap_curr,
             
-            dib_id_hist, dib_imb_hist, dib_thres_hist, dib_aggressiveness_hist, dib_aggressiveness_volume_hist,
+            dib_id_hist, dib_imb_hist, dib_thres_hist, dib_aggr_hist, dib_aggr_v_hist,
             dib_imb_curr, dib_thres_curr, dib_vwap_curr
         ) VALUES ",
         schema, table,
