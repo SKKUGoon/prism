@@ -9,7 +9,8 @@ pub struct Orderbook {
     pub bids: HashMap<String, String>, // key: price, value: order id
     pub asks: HashMap<String, String>, // key: price, value: order id
 
-    pub time: u64,
+    pub trade_time: u64,
+    pub event_time: u64,
     pub last_update_exchange: String,
 
     rx: Receiver<OrderbookUpdateStream>,
@@ -23,14 +24,16 @@ pub struct OrderbookData {
 
     pub bids: HashMap<String, String>, // key: price, value: order id
     pub asks: HashMap<String, String>, // key: price, value: order id
-    pub time: u64,
+    pub trade_time: u64,
+    pub event_time: u64,
 }
 
 pub struct OrderbookUpdateStream {
     pub bids: HashMap<String, String>, // key: price, value: order id
     pub asks: HashMap<String, String>, // key: price, value: order id
 
-    pub time: u64,
+    pub trade_time: u64,
+    pub event_time: u64,
     pub last_update_exchange: String,
 }
 
@@ -40,7 +43,8 @@ impl Orderbook {
         Self {
             bids: HashMap::new(),
             asks: HashMap::new(),
-            time: 0,
+            trade_time: 0,
+            event_time: 0,
             last_update_exchange: String::new(),
             rx,
             tx,
@@ -57,8 +61,13 @@ impl Orderbook {
                 best_ask: (String::new(), String::new()),
                 bids: self.bids.clone(),
                 asks: self.asks.clone(),
-                time: self.time,
+                trade_time: self.trade_time,
+                event_time: self.event_time,
             };
+
+            if data.trade_time == 0 || data.event_time == 0 {
+                continue;
+            }
 
             if let Err(e) = self.tx.send(data).await {
                 log::error!("Error sending orderbook data to prism: {}", e);
@@ -71,7 +80,7 @@ impl Orderbook {
     pub fn display(&self) {
         debug!(
             "Time: {} | Source: {}",
-            self.time, self.last_update_exchange
+            self.trade_time, self.last_update_exchange
         );
     }
 
@@ -92,7 +101,8 @@ impl Orderbook {
             }
         }
 
-        self.time = update.time;
+        self.trade_time = update.trade_time;
+        self.event_time = update.event_time;
         self.last_update_exchange = update.last_update_exchange.to_string();
     }
 }

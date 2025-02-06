@@ -166,7 +166,8 @@ impl BinanceSpotOrderbookStreamHandler {
         OrderbookUpdateStream {
             bids,
             asks,
-            time: update.u,
+            trade_time: update.u,
+            event_time: update.E,
             last_update_exchange: "Binance".to_string(),
         }
     }

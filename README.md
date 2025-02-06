@@ -3,21 +3,16 @@
 ## Setup
 
 ```bash
-cargo run
+cargo build
 ```
 
-## Run
+## Dockerized
 
+```bash
+docker compose build
+docker compose up
+```
 
-## Todo
-
-- [ ] Add Bitget Futures
-- [ ] Add Binance Futures
-- [ ] Add Binance Spot
-- [ ] Add Bitget Spot
-- [ ] Add Bybit
-- [ ] Add OKX
-- [ ] Add Coinbase
 
 ## Flow
 

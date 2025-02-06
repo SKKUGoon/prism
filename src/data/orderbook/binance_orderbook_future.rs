@@ -184,7 +184,8 @@ impl BinanceFutureOrderbookStreamHandler {
         OrderbookUpdateStream {
             bids,
             asks,
-            time: update.data.T,
+            trade_time: update.data.T,
+            event_time: update.data.E,
             last_update_exchange: "Binance".to_string(),
         }
     }

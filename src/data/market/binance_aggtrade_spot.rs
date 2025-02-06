@@ -102,7 +102,8 @@ impl BinanceSpotAggTradeStreamHandler {
             price: update.p.parse().unwrap(),
             quantity: update.q.parse().unwrap(),
             buyer_market_maker: update.m,
-            time: update.T,
+            trade_time: update.T,
+            event_time: update.E,
         }
     }
 }

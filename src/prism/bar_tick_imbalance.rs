@@ -24,6 +24,13 @@ pub struct TickImbalanceBar {
     ewma_t_current: f32,
     historical_threshold: VecDeque<f32>,
     pub imb_thres: f32, // Tick imbalance threshold. Just for logging
+
+    // VWAP
+    // VWAP is calculated during the bar generation + data population (by each tick)
+    // VWAP is fixed after when the bar is closed
+    pub vwap: f32, // Calculate using cum_price_volume / cum_volume
+    cum_price_volume: f32,
+    cum_volume: f32,
 }
 
 const TICK_IMBALANCE_BAR_THRESHOLD_COUNT: usize = 50;
@@ -40,13 +47,17 @@ impl TickImbalanceBar {
             pc: None,
             imb: 0.0,
             tsize: 0,
+            imb_thres: 0.0, // Imbalance cannot be 0
+            vwap: 0.0,      // Price cannot be 0
 
             genesis_collect_period: 5000, // 5 seconds
             ewma_factor: 0.9, // Higher factor = more weights to recent data, more responsive to volatile market
             ewma_imb_current: 0.0,
             ewma_t_current: 0.0,
             historical_threshold: VecDeque::new(),
-            imb_thres: 0.0,
+
+            cum_price_volume: 0.0,
+            cum_volume: 0.0,
         }
     }
 
@@ -71,6 +82,9 @@ impl TickImbalanceBar {
                 self.pc = Some(mkt_data.price);
                 self.ph = Some(self.ph.unwrap().max(mkt_data.price));
                 self.pl = Some(self.pl.unwrap().min(mkt_data.price));
+
+                // Update VWAP
+                self.update_vwap(mkt_data); //
 
                 // Check if the bar is ready to be created
                 if let Some(te) = self.te {
@@ -106,6 +120,9 @@ impl TickImbalanceBar {
                 self.pc = Some(mkt_data.price);
                 self.tsize = 1;
                 self.imb = 0.0;
+                self.vwap = 0.0;
+                self.cum_price_volume = 0.0;
+                self.cum_volume = 0.0;
             }
         }
 
@@ -118,6 +135,15 @@ impl TickImbalanceBar {
             initial_value * (-k1 * (self.tsize as f32).sqrt()).exp() // Slow decay for t <= 5000
         } else {
             initial_value * (-k2 * ((self.tsize as f32) - 5000.0).sqrt()).exp() // Faster decay after 5000
+        }
+    }
+
+    fn update_vwap(&mut self, mkt_data: &MarketData) {
+        self.cum_price_volume += mkt_data.price * mkt_data.quantity;
+        self.cum_volume += mkt_data.quantity;
+
+        if self.cum_volume > 0.0 {
+            self.vwap = self.cum_price_volume / self.cum_volume;
         }
     }
 
@@ -142,9 +168,13 @@ impl TickImbalanceBar {
                 self.ph = Some(self.ph.unwrap().max(mkt_data.price));
                 self.pl = Some(self.pl.unwrap().min(mkt_data.price));
 
+                // Update VWAP
+                self.update_vwap(mkt_data);
+
+                // Calculate threshold
+                // Manually set a threshold's limit to prevent the threshold explosion
                 let mut threshold = self.ewma_imb_current.abs() * self.ewma_t_current;
 
-                // Manually set a threshold's limit to prevent the threshold explosion
                 let threshold_max = self
                     .historical_threshold
                     .clone()
@@ -199,8 +229,13 @@ impl TickImbalanceBar {
                 self.ph = Some(mkt_data.price);
                 self.pl = Some(mkt_data.price);
                 self.pc = Some(mkt_data.price);
-                self.tsize = 1;
                 self.imb = 0.0;
+                self.tsize = 1;
+
+                // Reset VWAP
+                self.cum_price_volume = 0.0;
+                self.cum_volume = 0.0;
+                self.vwap = 0.0;
             }
         }
 
@@ -218,5 +253,9 @@ impl TickImbalanceBar {
         self.pc = None;
         self.imb = 0.0;
         self.tsize = 0;
+
+        // Reset VWAP - But keep the VWAP value.
+        self.cum_price_volume = 0.0;
+        self.cum_volume = 0.0;
     }
 }

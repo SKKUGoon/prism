@@ -160,7 +160,8 @@ impl BitgetFutureOrderbookStreamHandler {
         OrderbookUpdateStream {
             bids,
             asks,
-            time: update.data[0].ts.parse::<u64>().unwrap(),
+            trade_time: update.data[0].ts.parse::<u64>().unwrap(),
+            event_time: update.data[0].ts.parse::<u64>().unwrap(),
             last_update_exchange: "bitget".to_string(),
         }
     }

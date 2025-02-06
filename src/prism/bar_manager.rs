@@ -5,6 +5,13 @@ use std::collections::VecDeque;
 
 #[derive(Debug)]
 pub struct Bar {
+    // Manages all the possible bars
+    // 1. Tick Imbalance Bar
+    // - (Explain)
+    // 2. Volume Imbalance Bar
+    // - (Explain)
+    // 3. Dollar Imbalance Bar
+    // - (Explain)
     pub tick_imbalance_bar_queue: VecDeque<TickImbalanceBar>,
     tick_imbalance_bar_max_capa: usize,
 
@@ -66,6 +73,11 @@ impl Bar {
             }
         }
         self.tick_imbalance_bar_queue.push_back(bar.clone());
+        log::info!(
+            "Tick imbalance bar updated: VWAP vs Price: {:?} vs {:?}",
+            bar.vwap,
+            bar.pc, // Always use the closing price
+        );
     }
 
     pub fn update_volume_imbalance_bar(&mut self, bar: &VolumeImbalanceBar) {

@@ -34,25 +34,16 @@ pub struct PrismaFeature {
     pub obi_range: (f32, f32, f32, f32), // Ranged Orderbook imbalance
 
     pub tick_imbalance_bar: TickImbalanceBar,
-    tick_imbalance_bar_init: bool,
-
     pub volume_imbalance_bar_both: VolumeImbalanceBar,
-    volume_imbalance_bar_both_init: bool,
-
     pub volume_imbalance_bar_maker: VolumeImbalanceBar,
-    volume_imbalance_bar_maker_init: bool,
-
     pub volume_imbalance_bar_taker: VolumeImbalanceBar,
-    volume_imbalance_bar_taker_init: bool,
-
     pub dollar_imbalance_bar_both: DollarImbalanceBar,
+
+    tick_imbalance_bar_init: bool,
+    volume_imbalance_bar_both_init: bool,
+    volume_imbalance_bar_maker_init: bool,
+    volume_imbalance_bar_taker_init: bool,
     dollar_imbalance_bar_both_init: bool,
-
-    pub dollar_imbalance_bar_maker: DollarImbalanceBar,
-    dollar_imbalance_bar_maker_init: bool,
-
-    pub dollar_imbalance_bar_taker: DollarImbalanceBar,
-    dollar_imbalance_bar_taker_init: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -112,12 +103,6 @@ impl PrismFeatureEngine {
 
                 dollar_imbalance_bar_both: DollarImbalanceBar::new(DollarVolumeType::Both),
                 dollar_imbalance_bar_both_init: false,
-
-                dollar_imbalance_bar_maker: DollarImbalanceBar::new(DollarVolumeType::Maker),
-                dollar_imbalance_bar_maker_init: false,
-
-                dollar_imbalance_bar_taker: DollarImbalanceBar::new(DollarVolumeType::Taker),
-                dollar_imbalance_bar_taker_init: false,
             },
         }
     }

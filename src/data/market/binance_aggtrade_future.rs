@@ -40,7 +40,8 @@ pub struct MarketData {
     pub price: f32,
     pub quantity: f32,
     pub buyer_market_maker: bool,
-    pub time: u64,
+    pub trade_time: u64,
+    pub event_time: u64,
 }
 
 pub struct BinanceFutureAggTradeStreamHandler {
@@ -125,7 +126,8 @@ impl BinanceFutureAggTradeStreamHandler {
             price: update.data.p.parse().unwrap(),
             quantity: update.data.q.parse().unwrap(),
             buyer_market_maker: update.data.m,
-            time: update.data.T,
+            trade_time: update.data.T,
+            event_time: update.data.E,
         }
     }
 }

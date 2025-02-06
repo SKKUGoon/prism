@@ -25,8 +25,16 @@ pub struct DollarImbalanceBar {
     ewma_t_current: f32,
     historical_threshold: VecDeque<f32>,
     pub imb_thres: f32,
+
+    // VWAP
+    // VWAP is calculated during the bar generation + data population (by each tick)
+    // VWAP is fixed after when the bar is closed
+    pub vwap: f32, // Calculate using cum_price_volume / cum_volume
+    cum_price_volume: f32,
+    cum_volume: f32,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub enum DollarVolumeType {
     Maker,
@@ -48,14 +56,17 @@ impl DollarImbalanceBar {
             pc: None,
             imb: 0.0,
             tsize: 0,
-
+            imb_thres: 0.0,
+            vwap: 0.0,
             genesis_collect_period: 5000, // 5 seconds
             ewma_factor: 0.9, // Higher factor = more weights to recent data, more responsive to volatile market
             volume_type,
             ewma_imb_current: 0.0,
             ewma_t_current: 0.0,
             historical_threshold: VecDeque::new(),
-            imb_thres: 0.0,
+
+            cum_price_volume: 0.0,
+            cum_volume: 0.0,
         }
     }
 
@@ -88,6 +99,9 @@ impl DollarImbalanceBar {
                 self.pc = Some(mkt_data.price);
                 self.ph = Some(self.ph.unwrap().max(mkt_data.price));
                 self.pl = Some(self.pl.unwrap().min(mkt_data.price));
+
+                // Update VWAP
+                self.update_vwap(mkt_data);
 
                 if let Some(te) = self.te {
                     if (te - ts >= self.genesis_collect_period)
@@ -136,6 +150,15 @@ impl DollarImbalanceBar {
         }
     }
 
+    fn update_vwap(&mut self, mkt_data: &MarketData) {
+        self.cum_price_volume += mkt_data.price * mkt_data.quantity;
+        self.cum_volume += mkt_data.quantity;
+
+        if self.cum_volume > 0.0 {
+            self.vwap = self.cum_price_volume / self.cum_volume;
+        }
+    }
+
     pub fn bar(&mut self, mkt_data: &MarketData) -> Option<DollarImbalanceBar> {
         match self.ts {
             Some(_) => {
@@ -158,6 +181,9 @@ impl DollarImbalanceBar {
                     self.imb += tick_imbalance * mkt_data.quantity * mkt_data.price;
                     self.tsize += 1;
                 }
+
+                // Update VWAP
+                self.update_vwap(mkt_data);
 
                 // Update existing bar
                 self.te = Some(mkt_data.time);
@@ -222,6 +248,9 @@ impl DollarImbalanceBar {
                 self.pc = Some(mkt_data.price);
                 self.tsize = 1;
                 self.imb = 0.0;
+                self.vwap = 0.0;
+                self.cum_price_volume = 0.0;
+                self.cum_volume = 0.0;
             }
         }
 
@@ -239,5 +268,9 @@ impl DollarImbalanceBar {
         self.pc = None;
         self.imb = 0.0;
         self.tsize = 0;
+
+        // Reset VWAP - But keep the VWAP value.
+        self.cum_price_volume = 0.0;
+        self.cum_volume = 0.0;
     }
 }
