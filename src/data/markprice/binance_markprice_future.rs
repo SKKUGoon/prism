@@ -9,47 +9,41 @@ use tokio_tungstenite::{
     tungstenite::{self, Message},
 };
 
-/* Binance AggTrade Stream */
-
 #[allow(dead_code)]
 #[derive(Debug, Deserialize)]
-pub struct BinanceWebsocketFutureAggTrade {
+pub struct BinanceWebsocketFutureMarkPrice {
     pub stream: String,
-    pub data: FutureAggTradeEvent,
+    pub data: FutureMarkPriceEvent,
 }
 
 #[allow(dead_code, non_snake_case)]
 #[derive(Debug, Deserialize)]
-pub struct FutureAggTradeEvent {
+pub struct FutureMarkPriceEvent {
     pub e: String, // Event type
     pub E: u64,    // Event time
     pub s: String, // Symbol
-    pub a: u64,    // Aggregate trade ID
-    pub p: String, // Price
-    pub q: String, // Quantity
-    pub f: u64,    // First trade ID
-    pub l: u64,    // Last trade ID
-    pub T: u64,    // Trade time
-    pub m: bool,   // Is the buyer the market maker?
+    pub p: String, // Mark price
+    pub i: String, // Index price
+    pub P: String, // Estimated Settle Price, only useful in the last hour before the settlement starts
+    pub r: String, // Funding rate
+    pub T: u64,    // Next funding time
 }
 
-#[derive(Debug, Clone)]
-#[allow(dead_code)]
-pub struct MarketData {
-    pub price: f32,
-    pub quantity: f32,
-    pub buyer_market_maker: bool,
-    pub trade_time: u64,
+pub struct MarkPriceData {
+    pub mark_price: f32,
+    pub index_price: f32,
+    pub funding_rate: f32,
+    pub next_funding_time: u64,
     pub event_time: u64,
 }
 
-pub struct BinanceFutureAggTradeStreamHandler {
+pub struct BinanceFutureMarkPriceStreamHandler {
     pub streams: String,
     pub symbol: String,
-    pub tx: mpsc::Sender<MarketData>,
+    pub tx: mpsc::Sender<MarkPriceData>,
 }
 
-impl StreamHandler for BinanceFutureAggTradeStreamHandler {
+impl StreamHandler for BinanceFutureMarkPriceStreamHandler {
     fn connect(&self) -> Box<dyn Future<Output = Result<(), tungstenite::Error>> + Send + Unpin> {
         let symbol = self.symbol.clone();
         let streams = self.streams.clone();
@@ -63,28 +57,28 @@ impl StreamHandler for BinanceFutureAggTradeStreamHandler {
             let (ws_stream, _) = connect_async(&ws_url).await?;
             let (write, read) = ws_stream.split();
 
-            let handler = BinanceFutureAggTradeStreamHandler {
+            let handler = BinanceFutureMarkPriceStreamHandler {
                 symbol,
                 streams,
                 tx,
             };
-            handler.handle_aggtrade(read, write).await;
+            handler.handle_markprice(read, write).await;
 
             Ok(())
         }))
     }
 }
 
-impl BinanceFutureAggTradeStreamHandler {
-    pub fn new(symbol: String, tx: mpsc::Sender<MarketData>) -> Self {
+impl BinanceFutureMarkPriceStreamHandler {
+    pub fn new(symbol: String, tx: mpsc::Sender<MarkPriceData>) -> Self {
         Self {
             symbol,
-            streams: "aggTrade".to_string(),
+            streams: "markPrice".to_string(),
             tx,
         }
     }
 
-    pub async fn handle_aggtrade<R, S>(&self, mut read: R, mut write: S)
+    pub async fn handle_markprice<R, S>(&self, mut read: R, mut write: S)
     where
         R: StreamExt<Item = Result<Message, tungstenite::Error>> + Unpin,
         S: SinkExt<Message> + Unpin,
@@ -93,26 +87,26 @@ impl BinanceFutureAggTradeStreamHandler {
         while let Some(msg) = read.next().await {
             match msg {
                 Ok(Message::Text(text)) => {
-                    match serde_json::from_str::<BinanceWebsocketFutureAggTrade>(&text) {
-                        Ok(aggtrade) => {
-                            let update = self.generate_aggtrade_update(&aggtrade);
+                    match serde_json::from_str::<BinanceWebsocketFutureMarkPrice>(&text) {
+                        Ok(markprice) => {
+                            let update = self.generate_markprice_update(&markprice);
                             if self.tx.send(update).await.is_err() {
-                                error!("Binance aggtrade stream: Failed to send update");
+                                error!("Binance mark price stream: Failed to send update");
                             }
                         }
                         Err(e) => {
-                            error!("Binance aggtrade stream: Failed to parse message: {}", e);
+                            error!("Binance mark price stream: Failed to parse message: {}", e);
                         }
                     }
                 }
                 Ok(Message::Ping(payload)) => {
                     if let Err(e) = write.send(Message::Pong(payload)).await {
-                        error!("Binance aggtrade stream: Failed to send Pong: {}", e);
+                        error!("Binance mark price stream: Failed to send pong: {}", e);
                     }
                 }
-                Ok(Message::Pong(_)) => info!("Binance aggtrade stream: Pong received"),
+                Ok(Message::Pong(_)) => info!("Binance mark price stream: Pong received"),
                 Ok(Message::Close(_)) => {
-                    info!("Binance aggtrade stream: Connection closed");
+                    info!("Binance mark price stream: Connection closed");
                     break;
                 }
                 _ => (),
@@ -120,12 +114,12 @@ impl BinanceFutureAggTradeStreamHandler {
         }
     }
 
-    fn generate_aggtrade_update(&self, update: &BinanceWebsocketFutureAggTrade) -> MarketData {
-        MarketData {
-            price: update.data.p.parse().unwrap(),
-            quantity: update.data.q.parse().unwrap(),
-            buyer_market_maker: update.data.m,
-            trade_time: update.data.T,
+    fn generate_markprice_update(&self, update: &BinanceWebsocketFutureMarkPrice) -> MarkPriceData {
+        MarkPriceData {
+            mark_price: update.data.p.parse().unwrap(),
+            index_price: update.data.i.parse().unwrap(),
+            funding_rate: update.data.r.parse().unwrap(),
+            next_funding_time: update.data.T,
             event_time: update.data.E,
         }
     }
