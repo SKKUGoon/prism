@@ -1,5 +1,5 @@
 use crate::prism::bar_manager::BarManager;
-use crate::prism::stream_process::FeatureProcessed;
+use crate::prism::stream::FeatureProcessed;
 use crate::prism::AssetSource;
 use log::debug;
 use std::collections::VecDeque;
@@ -30,8 +30,8 @@ impl PrismConfig {
     }
 
     #[allow(dead_code)]
-    pub fn enable_data_dump(&mut self) {
-        self.data_dump = true;
+    pub fn enable_data_dump(&mut self, data_dump: bool) {
+        self.data_dump = data_dump;
     }
 }
 

@@ -2,7 +2,7 @@ use log::{error, info};
 use tokio::sync::mpsc;
 use tokio_postgres::{Client, NoTls};
 
-use crate::prism::stream_process::FeatureProcessed;
+use crate::prism::stream::FeatureProcessed;
 
 const BATCH_SIZE: usize = 50;
 
