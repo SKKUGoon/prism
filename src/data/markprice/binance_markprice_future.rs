@@ -29,6 +29,8 @@ pub struct FutureMarkPriceEvent {
     pub T: u64,    // Next funding time
 }
 
+#[allow(dead_code)]
+#[derive(Debug)]
 pub struct MarkPriceData {
     pub mark_price: f32,
     pub index_price: f32,

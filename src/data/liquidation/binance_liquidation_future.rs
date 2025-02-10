@@ -40,6 +40,8 @@ pub struct FutureLiquidationOrder {
     pub T: u64,     // Order Trade Time
 }
 
+#[allow(dead_code)]
+#[derive(Debug)]
 pub struct LiquidationData {
     pub side: String,
     pub avg_price: f32,
