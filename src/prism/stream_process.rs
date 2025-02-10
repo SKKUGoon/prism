@@ -1,5 +1,8 @@
-use crate::data::market::binance_aggtrade_future::MarketData;
-use crate::data::orderbook::book::OrderbookData;
+use crate::data::{
+    liquidation::binance_liquidation_future::LiquidationData,
+    market::binance_aggtrade_future::MarketData,
+    markprice::binance_markprice_future::MarkPriceData, orderbook::book::OrderbookData,
+};
 use crate::prism::bar::{DollarImbalanceBar, TickImbalanceBar, VolumeImbalanceBar};
 use crate::prism::AssetSource;
 use core::f32;
@@ -11,6 +14,8 @@ pub struct StreamProcessor {
     // Receive data from
     rx_orderbook: Receiver<OrderbookData>,
     rx_market: Receiver<MarketData>,
+    rx_markprice: Receiver<MarkPriceData>,
+    rx_liquidation: Receiver<LiquidationData>,
 
     // Send data to Executor
     tx_feature: Sender<FeatureProcessed>,
@@ -27,12 +32,23 @@ pub struct StreamProcessor {
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
 pub struct FeatureProcessed {
+    // What event is this?
+    pub event_type: Option<String>,
     // When the websocket event is received
     pub event_time: u64,
     // When the feature is processed
     pub processed_time: u64,
     // When the trade is executed
     pub trade_time: u64,
+
+    // Liquidation Dollar Volume - Only Future
+    pub liquidation_side: String,
+    pub liquidation_dvolume: f32,
+
+    // Mark Price - Only Future
+    pub mark_price: f32,
+    pub funding_rate: f32,
+    pub next_funding_time: u64,
 
     // f for Future, s for Spot
     pub source: String,
@@ -116,6 +132,8 @@ impl StreamProcessor {
         source: AssetSource,
         rx_orderbook: Receiver<OrderbookData>,
         rx_market: Receiver<MarketData>,
+        rx_markprice: Receiver<MarkPriceData>,
+        rx_liquidation: Receiver<LiquidationData>,
         tx_feature: Sender<FeatureProcessed>,
     ) -> Self {
         // rx_orderbook, rx_market: Collects data from the orderbook and market stream
@@ -125,6 +143,8 @@ impl StreamProcessor {
             // Attach channels
             rx_orderbook,
             rx_market,
+            rx_markprice,
+            rx_liquidation,
             tx_feature,
 
             fip: FeatureInProgress {
@@ -146,9 +166,19 @@ impl StreamProcessor {
 
             fpd: FeatureProcessed {
                 // Time
-                trade_time: 0,
+                event_type: None,
                 event_time: 0,
                 processed_time: 0,
+                trade_time: 0,
+
+                // Liquidation Dollar Volume
+                liquidation_side: "".to_string(),
+                liquidation_dvolume: 0.0,
+
+                // Mark Price
+                mark_price: 0.0,
+                funding_rate: 0.0,
+                next_funding_time: 0,
 
                 source: source.as_str().to_string(),
                 price: -f32::INFINITY,
@@ -317,6 +347,44 @@ impl StreamProcessor {
                             error!("Failed to send feature to executor");
                         }
                     }
+                }
+
+                // Insert Mark Price Data
+                Some(fut_markprice_data) = self.rx_markprice.recv() => {
+                    self.fpd.event_type = Some("Mark Price".to_string());
+                    self.fpd.event_time = fut_markprice_data.event_time;
+                    self.fpd.processed_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64;
+
+                    self.fpd.mark_price = fut_markprice_data.mark_price;
+                    self.fpd.funding_rate = fut_markprice_data.funding_rate;
+                    self.fpd.next_funding_time = fut_markprice_data.next_funding_time;
+
+                    if self.tx_feature.send(self.fpd.clone()).await.is_err() {
+                        error!("Failed to send feature to executor");
+                    }
+
+                    // Re-Initialize mark price data
+                    self.fpd.mark_price = 0.0;
+                    self.fpd.funding_rate = 0.0;
+                }
+
+                // Insert Liquidation Data
+                Some(fut_liquidation_data) = self.rx_liquidation.recv() => {
+                    // Update price
+                    self.fpd.event_type = Some("Liquidation".to_string());
+                    self.fpd.event_time = fut_liquidation_data.event_time;
+                    self.fpd.processed_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64;
+
+                    self.fpd.liquidation_side = fut_liquidation_data.side;
+                    self.fpd.liquidation_dvolume = fut_liquidation_data.quantity * fut_liquidation_data.avg_price;
+
+                    if self.tx_feature.send(self.fpd.clone()).await.is_err() {
+                        error!("Failed to send feature to executor");
+                    }
+
+                    // Re-Initialize liquidation data
+                    self.fpd.liquidation_side = "".to_string();
+                    self.fpd.liquidation_dvolume = 0.0;
                 }
             }
         }

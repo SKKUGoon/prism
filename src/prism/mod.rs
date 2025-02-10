@@ -1,7 +1,7 @@
 pub mod bar;
 pub mod bar_manager;
 pub mod executor;
-pub mod stream_process;
+pub mod stream;
 
 #[derive(Debug, Clone)]
 pub enum AssetSource {
