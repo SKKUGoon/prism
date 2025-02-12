@@ -267,14 +267,14 @@ impl<Rx> StreamBase<Rx> {
 
         if self.in_progress.tick_imbalance_bar_init {
             if let Some(tb) = self.in_progress.tick_imbalance_bar.bar(mkt_data) {
-                self.processed.tick_imbalance_bar = tb.clone();
+                self.processed.tick_imbalance_bar = tb;
 
                 // Reset the feature in progress
                 log::debug!("New Tick Imbalance Bar Created");
                 self.in_progress.tick_imbalance_bar.bar.reset();
             }
         } else if let Some(tb) = self.in_progress.tick_imbalance_bar.genesis_bar(mkt_data) {
-            self.processed.tick_imbalance_bar = tb.clone();
+            self.processed.tick_imbalance_bar = tb;
 
             // Mark that the first bar has been created
             self.processed.tick_imbalance_bar_init = true;
