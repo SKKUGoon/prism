@@ -12,7 +12,7 @@ use tokio_tungstenite::{
 #[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 pub struct BinanceWebsocketFutureLiquidation {
-    pub streams: String,
+    pub stream: String,
     pub data: FutureLiquidationEvent,
 }
 

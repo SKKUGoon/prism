@@ -189,9 +189,9 @@ pub struct StreamBase<Rx> {
     // Feature processed should not be reset
 
     // Feature in progress
-    pub fip: FeatureInProgress,
+    pub in_progress: FeatureInProgress,
     // Feature processed
-    pub fpd: FeatureProcessed,
+    pub processed: FeatureProcessed,
 
     pub additional_rx: Rx,
 }
@@ -205,84 +205,84 @@ pub struct FutureReceivers {
 impl<Rx> StreamBase<Rx> {
     pub fn update_dollar_imbalance_bar(&mut self, mkt_data: &MarketData) {
         // Update VWAP and imbalance values regardless of bar completion
-        self.fpd.dollar_imbalance_vwap = self.fip.dollar_imbalance_bar.bar.vwap;
-        self.fpd.dollar_imbalance = self.fip.dollar_imbalance_bar.bar.imb;
-        self.fpd.dollar_imbalance_thres = self.fip.dollar_imbalance_bar.bar.imb_thres;
-        self.fpd.dollar_imbalance_cvd = self.fip.dollar_imbalance_bar.cvd;
+        self.processed.dollar_imbalance_vwap = self.in_progress.dollar_imbalance_bar.bar.vwap;
+        self.processed.dollar_imbalance = self.in_progress.dollar_imbalance_bar.bar.imb;
+        self.processed.dollar_imbalance_thres = self.in_progress.dollar_imbalance_bar.bar.imb_thres;
+        self.processed.dollar_imbalance_cvd = self.in_progress.dollar_imbalance_bar.cvd;
 
-        if self.fip.dollar_imbalance_bar_init {
-            if let Some(db) = self.fip.dollar_imbalance_bar.bar(mkt_data) {
-                self.fpd.dollar_imbalance_bar = db.clone();
+        if self.in_progress.dollar_imbalance_bar_init {
+            if let Some(db) = self.in_progress.dollar_imbalance_bar.bar(mkt_data) {
+                self.processed.dollar_imbalance_bar = db.clone();
 
                 // Reset the feature in progress
                 log::debug!("New Dollar Imbalance Bar Created");
-                self.fip.dollar_imbalance_bar.reset();
+                self.in_progress.dollar_imbalance_bar.reset();
             }
-        } else if let Some(db) = self.fip.dollar_imbalance_bar.genesis_bar(mkt_data) {
-            self.fpd.dollar_imbalance_bar = db.clone();
+        } else if let Some(db) = self.in_progress.dollar_imbalance_bar.genesis_bar(mkt_data) {
+            self.processed.dollar_imbalance_bar = db.clone();
 
             // Mark that the first bar has been created
-            self.fpd.dollar_imbalance_bar_init = true;
-            self.fip.dollar_imbalance_bar_init = true;
+            self.processed.dollar_imbalance_bar_init = true;
+            self.in_progress.dollar_imbalance_bar_init = true;
 
             // Reset the feature in progress
             log::debug!("First Dollar Imbalance Bar Created");
-            self.fip.dollar_imbalance_bar.reset();
+            self.in_progress.dollar_imbalance_bar.reset();
         }
     }
 
     pub fn update_volume_imbalance_bar(&mut self, mkt_data: &MarketData) {
         // Update VWAP and imbalance values regardless of bar completion
-        self.fpd.volume_imbalance_vwap = self.fip.volume_imbalance_bar.bar.vwap;
-        self.fpd.volume_imbalance = self.fip.volume_imbalance_bar.bar.imb;
-        self.fpd.volume_imbalance_thres = self.fip.volume_imbalance_bar.bar.imb_thres;
-        self.fpd.volume_imbalance_cvd = self.fip.volume_imbalance_bar.cvd;
+        self.processed.volume_imbalance_vwap = self.in_progress.volume_imbalance_bar.bar.vwap;
+        self.processed.volume_imbalance = self.in_progress.volume_imbalance_bar.bar.imb;
+        self.processed.volume_imbalance_thres = self.in_progress.volume_imbalance_bar.bar.imb_thres;
+        self.processed.volume_imbalance_cvd = self.in_progress.volume_imbalance_bar.cvd;
 
-        if self.fip.volume_imbalance_bar_init {
-            if let Some(vb) = self.fip.volume_imbalance_bar.bar(mkt_data) {
-                self.fpd.volume_imbalance_bar = vb.clone();
+        if self.in_progress.volume_imbalance_bar_init {
+            if let Some(vb) = self.in_progress.volume_imbalance_bar.bar(mkt_data) {
+                self.processed.volume_imbalance_bar = vb.clone();
 
                 // Reset the feature in progress
                 log::debug!("New Volume Imbalance Bar Created");
-                self.fip.volume_imbalance_bar.reset();
+                self.in_progress.volume_imbalance_bar.reset();
             }
-        } else if let Some(vb) = self.fip.volume_imbalance_bar.genesis_bar(mkt_data) {
-            self.fpd.volume_imbalance_bar = vb.clone();
+        } else if let Some(vb) = self.in_progress.volume_imbalance_bar.genesis_bar(mkt_data) {
+            self.processed.volume_imbalance_bar = vb.clone();
 
             // Mark that the first bar has been created
-            self.fpd.volume_imbalance_bar_init = true;
-            self.fip.volume_imbalance_bar_init = true;
+            self.processed.volume_imbalance_bar_init = true;
+            self.in_progress.volume_imbalance_bar_init = true;
 
             // Reset the feature in progress
             log::debug!("First Volume Imbalance Bar Created");
-            self.fip.volume_imbalance_bar.reset();
+            self.in_progress.volume_imbalance_bar.reset();
         }
     }
 
     pub fn update_tick_imbalance_bar(&mut self, mkt_data: &MarketData) {
         // Update VWAP and imbalance values regardless of bar completion
-        self.fpd.tick_imbalance_vwap = self.fip.tick_imbalance_bar.bar.vwap;
-        self.fpd.tick_imbalance = self.fip.tick_imbalance_bar.bar.imb;
-        self.fpd.tick_imbalance_thres = self.fip.tick_imbalance_bar.bar.imb_thres;
+        self.processed.tick_imbalance_vwap = self.in_progress.tick_imbalance_bar.bar.vwap;
+        self.processed.tick_imbalance = self.in_progress.tick_imbalance_bar.bar.imb;
+        self.processed.tick_imbalance_thres = self.in_progress.tick_imbalance_bar.bar.imb_thres;
 
-        if self.fip.tick_imbalance_bar_init {
-            if let Some(tb) = self.fip.tick_imbalance_bar.bar(mkt_data) {
-                self.fpd.tick_imbalance_bar = tb.clone();
+        if self.in_progress.tick_imbalance_bar_init {
+            if let Some(tb) = self.in_progress.tick_imbalance_bar.bar(mkt_data) {
+                self.processed.tick_imbalance_bar = tb.clone();
 
                 // Reset the feature in progress
                 log::debug!("New Tick Imbalance Bar Created");
-                self.fip.tick_imbalance_bar.bar.reset();
+                self.in_progress.tick_imbalance_bar.bar.reset();
             }
-        } else if let Some(tb) = self.fip.tick_imbalance_bar.genesis_bar(mkt_data) {
-            self.fpd.tick_imbalance_bar = tb.clone();
+        } else if let Some(tb) = self.in_progress.tick_imbalance_bar.genesis_bar(mkt_data) {
+            self.processed.tick_imbalance_bar = tb.clone();
 
             // Mark that the first bar has been created
-            self.fpd.tick_imbalance_bar_init = true;
-            self.fip.tick_imbalance_bar_init = true;
+            self.processed.tick_imbalance_bar_init = true;
+            self.in_progress.tick_imbalance_bar_init = true;
 
             // Reset the feature in progress
             log::debug!("First Tick Imbalance Bar Created");
-            self.fip.tick_imbalance_bar.reset();
+            self.in_progress.tick_imbalance_bar.reset();
         }
     }
 }

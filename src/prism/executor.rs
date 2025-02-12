@@ -100,7 +100,7 @@ struct TradeComputer {
 }
 
 impl TradeComputer {
-    pub fn new() -> Self {
+    pub fn new(historical_bars: usize) -> Self {
         Self {
             // Price information
             future_price: None,
@@ -132,8 +132,8 @@ impl TradeComputer {
             historical_spot_dollar_vwap: VecDeque::new(),
 
             // Information bars
-            fut_bar: BarManager::new(100),
-            spt_bar: BarManager::new(100),
+            fut_bar: BarManager::new(historical_bars),
+            spt_bar: BarManager::new(historical_bars),
 
             // Imbalances
             future_tick_imbalance: None,
@@ -280,14 +280,16 @@ impl PrismTradeManager {
         tx_fut_db: mpsc::Sender<FeatureProcessed>,
         tx_spt_db: mpsc::Sender<FeatureProcessed>,
     ) -> Self {
+        let historical_bars = 10usize;
+
         Self {
             config,
             rx_fut_feature,
             rx_spt_feature,
 
-            fut_bar: BarManager::new(100),
-            spt_bar: BarManager::new(100),
-            trade_computer: TradeComputer::new(),
+            fut_bar: BarManager::new(historical_bars),
+            spt_bar: BarManager::new(historical_bars),
+            trade_computer: TradeComputer::new(historical_bars),
             tx_fut_db,
             tx_spt_db,
         }
@@ -306,7 +308,8 @@ impl PrismTradeManager {
                     let elapsed = start.elapsed();
 
                     debug!(
-                        "from trade to event : {:?}ms | from event to processed : {:?}ms | from processed to update: {:?}ms",
+                        "{:?} :: from trade to event : {:?}ms | from event to processed : {:?}ms | from processed to update: {:?}",
+                        feature.event_type.clone().unwrap_or("default".to_string()),
                         feature.event_time.saturating_sub(feature.trade_time),
                         feature.processed_time.saturating_sub(feature.event_time),
                         elapsed

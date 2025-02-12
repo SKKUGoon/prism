@@ -28,6 +28,9 @@ pub struct Bar {
     pub vwap: f32,
     cum_price_volume: f32,
     cum_volume: f32,
+
+    // Config
+    candle_opened: bool,
 }
 
 impl Bar {
@@ -51,6 +54,7 @@ impl Bar {
             historical_threshold: VecDeque::new(),
             cum_price_volume: 0.0,
             cum_volume: 0.0,
+            candle_opened: false,
         }
     }
 
@@ -106,7 +110,7 @@ impl Bar {
         self.po = None;
         self.ph = None;
         self.pl = None;
-        self.pc = None;
+        // Do not reset pc - previous price
         self.imb = 0.0;
         self.tsize = 0;
         self.cum_price_volume = 0.0;
