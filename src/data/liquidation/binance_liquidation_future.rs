@@ -1,4 +1,4 @@
-use crate::data::stream::StreamHandler;
+use crate::data::{liquidation::LiquidationData, stream::StreamHandler};
 use futures::{SinkExt, StreamExt};
 use log::{error, info};
 use serde::Deserialize;
@@ -38,16 +38,6 @@ pub struct FutureLiquidationOrder {
     pub l: String,  // Order Last Filled Quantity
     pub z: String,  // Order Filled Accumulated Quantity
     pub T: u64,     // Order Trade Time
-}
-
-#[allow(dead_code)]
-#[derive(Debug)]
-pub struct LiquidationData {
-    pub side: String,
-    pub avg_price: f32,
-    pub quantity: f32,
-    pub trade_time: u64,
-    pub event_time: u64,
 }
 
 pub struct BinanceFutureLiquidationStreamHandler {
