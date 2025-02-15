@@ -1,3 +1,5 @@
+use crate::data::market::MarketData;
+use crate::data::stream::StreamHandler;
 use futures::{SinkExt, StreamExt};
 use log::{error, info};
 use serde::Deserialize;
@@ -7,10 +9,6 @@ use tokio_tungstenite::{
     connect_async,
     tungstenite::{self, Message},
 };
-
-use crate::data::stream::StreamHandler;
-
-use super::binance_aggtrade_future::MarketData;
 
 /* Binance AggTrade Stream */
 

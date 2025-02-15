@@ -1,3 +1,4 @@
+use crate::data::market::MarketData;
 use crate::data::stream::StreamHandler;
 use futures::{SinkExt, StreamExt};
 use log::{error, info};
@@ -31,16 +32,6 @@ pub struct FutureAggTradeEvent {
     pub l: u64,    // Last trade ID
     pub T: u64,    // Trade time
     pub m: bool,   // Is the buyer the market maker?
-}
-
-#[derive(Debug, Clone)]
-#[allow(dead_code)]
-pub struct MarketData {
-    pub price: f32,
-    pub quantity: f32,
-    pub buyer_market_maker: bool,
-    pub trade_time: u64,
-    pub event_time: u64,
 }
 
 pub struct BinanceFutureAggTradeStreamHandler {

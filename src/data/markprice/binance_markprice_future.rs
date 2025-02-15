@@ -1,4 +1,4 @@
-use crate::data::stream::StreamHandler;
+use crate::data::{markprice::MarkPriceData, stream::StreamHandler};
 use futures::{SinkExt, StreamExt};
 use log::{error, info};
 use serde::Deserialize;
@@ -27,16 +27,6 @@ pub struct FutureMarkPriceEvent {
     pub P: String, // Estimated Settle Price, only useful in the last hour before the settlement starts
     pub r: String, // Funding rate
     pub T: u64,    // Next funding time
-}
-
-#[allow(dead_code)]
-#[derive(Debug)]
-pub struct MarkPriceData {
-    pub mark_price: f32,
-    pub index_price: f32,
-    pub funding_rate: f32,
-    pub next_funding_time: u64,
-    pub event_time: u64,
 }
 
 pub struct BinanceFutureMarkPriceStreamHandler {
