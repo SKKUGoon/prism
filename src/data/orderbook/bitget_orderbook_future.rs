@@ -1,3 +1,4 @@
+use crate::data::{orderbook::book::OrderbookUpdateStream, stream::StreamHandler};
 use futures::{SinkExt, StreamExt};
 use log::{error, info};
 use serde::{Deserialize, Serialize};
@@ -7,9 +8,6 @@ use tokio_tungstenite::{
     connect_async,
     tungstenite::{self, Message},
 };
-
-use super::book::OrderbookUpdateStream;
-use crate::data::stream::StreamHandler;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[allow(non_snake_case)]

@@ -1,5 +1,4 @@
 use crate::data::{orderbook::book::OrderbookUpdateStream, stream::StreamHandler};
-
 use futures::{SinkExt, StreamExt};
 use log::{error, info};
 use serde::Deserialize;

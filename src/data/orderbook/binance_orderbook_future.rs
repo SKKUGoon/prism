@@ -1,5 +1,4 @@
 use crate::data::{orderbook::book::OrderbookUpdateStream, stream::StreamHandler};
-
 use futures::{SinkExt, StreamExt};
 use log::{error, info};
 use serde::Deserialize;
@@ -144,7 +143,7 @@ impl BinanceFutureOrderbookStreamHandler {
                             last_update_id = diff.data.u;
                         }
                         Err(e) => {
-                            error!("Binance orderbook stream: Failed to parse message: {}", e);
+                            error!("Binance orderbook stream: Failed to parse message: {}", e)
                         }
                     }
                 }
