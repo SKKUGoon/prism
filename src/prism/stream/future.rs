@@ -1,12 +1,12 @@
-use crate::data::{market::binance_aggtrade_future::MarketData, orderbook::book::OrderbookData};
+use crate::data::{market::MarketData, orderbook::book::OrderbookData};
 use crate::prism::stream::{FeatureInProgress, FeatureProcessed, FutureReceivers, StreamBase};
 use log::error;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tokio::sync::mpsc::{Receiver, Sender};
 
-pub type FutureStreamProcessor = StreamBase<FutureReceivers>;
+pub type FutureStream = StreamBase<FutureReceivers>;
 
-impl FutureStreamProcessor {
+impl FutureStream {
     pub fn new(
         rx_orderbook: Receiver<OrderbookData>,
         rx_market: Receiver<MarketData>,
@@ -22,9 +22,7 @@ impl FutureStreamProcessor {
             additional_rx,
         }
     }
-}
 
-impl FutureStreamProcessor {
     pub async fn work(&mut self) {
         loop {
             tokio::select! {

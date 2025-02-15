@@ -1,4 +1,4 @@
-use crate::data::market::binance_aggtrade_future::MarketData;
+use crate::data::market::MarketData;
 use std::collections::VecDeque;
 
 // Common traits and structures
