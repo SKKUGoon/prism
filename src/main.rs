@@ -1,19 +1,9 @@
 use crate::data::{
-    liquidation::binance_liquidation_future::BinanceFutureLiquidationStreamHandler,
-    market::{
-        binance_aggtrade_future::BinanceFutureAggTradeStreamHandler,
-        binance_aggtrade_spot::BinanceSpotAggTradeStreamHandler,
-        upbit_aggtrade_spot::UpbitSpotAggTradeStreamHandler,
-    },
-    markprice::binance_markprice_future::BinanceFutureMarkPriceStreamHandler,
-    orderbook::{
-        binance_orderbook_future::BinanceFutureOrderbookStreamHandler,
-        binance_orderbook_spot::BinanceSpotOrderbookStreamHandler, book::Orderbook,
-        upbit_orderbook_spot::UpbitSpotOrderbookStreamHandler,
-    },
-    stream::StreamHandler,
+    binance::BinanceStreams,
+    exchanges::{FutureChannels, SpotChannels},
+    upbit::UpbitStreams,
 };
-use channel::{FutureChannel, SpotChannel};
+use channel::{FutureChannel, SpotChannel, SystemChannelPairs};
 use config::read_env_config;
 use database::postgres::timescale_batch_writer;
 use log::{error, info, warn};
@@ -53,51 +43,60 @@ async fn main() {
     /* Create channels for thread communication */
     let binance_fut = FutureChannel::new(env_var.channel_capacity);
     let binance_spt = SpotChannel::new(env_var.channel_capacity);
-    let upbit_spt = SpotChannel::new(env_var.channel_capacity);
 
-    /*
-    Start stream managers.
-    Transfer data to tx_fut_exec and tx_spt_exec
-    */
-    let mut binance_future = FutureStream::new(
+    let upbit_spt_krw = SpotChannel::new(env_var.channel_capacity);
+    let upbit_spt_btc = SpotChannel::new(env_var.channel_capacity);
+    let upbit_spt_usdt = SpotChannel::new(env_var.channel_capacity);
+
+    let system_fut = SystemChannelPairs::new(env_var.channel_capacity);
+    let system_spt = SystemChannelPairs::new(env_var.channel_capacity);
+
+    // let binance_streams = BinanceStreams::new(binance_fut, binance_spt);
+
+    /* Start stream managers */
+    let mut binance_future_manager = FutureStream::new(
         binance_fut.ob.mng.1,
         binance_fut.agg.1,
         FutureReceivers {
             rx_markprice: binance_fut.additional.mark.1,
             rx_liquidation: binance_fut.additional.liq.1,
         },
-        binance_fut.exec.0,
+        system_fut.exec.0,
     );
-    let mut binance_spot =
-        SpotStream::new(binance_spt.ob.mng.1, binance_spt.agg.1, binance_spt.exec.0);
-    let mut upbit_spot = SpotStream::new(upbit_spt.ob.mng.1, upbit_spt.agg.1, upbit_spt.exec.0);
+    let mut binance_spot_manager = SpotStream::new(
+        binance_spt.ob.mng.1,
+        binance_spt.agg.1,
+        system_spt.exec.0.clone(),
+    );
+    let mut upbit_spot_manager = SpotStream::new(
+        upbit_spt_krw.ob.mng.1,
+        upbit_spt_krw.agg.1,
+        system_spt.exec.0.clone(),
+    );
 
-    /*
-    Start Data Manager.
-    Receive data from tx_fut_exec and tx_spt_exec.
-    */
+    /* Start Data Manager */
     let mut core_config = PrismConfig::default();
     core_config.enable_data_dump(env_var.data_dump);
 
     let mut core_mng = PrismTradeManager::new(
         core_config,
-        binance_fut.exec.1,
-        binance_spt.exec.1,
-        binance_fut.db.0,
-        binance_spt.db.0,
+        system_fut.exec.1,
+        system_spt.exec.1,
+        system_fut.db.0,
+        system_spt.db.0,
     );
 
     /* Feature Creation Engine Start */
-    tasks.spawn(async move { binance_future.work().await });
-    tasks.spawn(async move { binance_spot.work().await });
-    tasks.spawn(async move { upbit_spot.work().await });
+    tasks.spawn(async move { binance_future_manager.work().await });
+    tasks.spawn(async move { binance_spot_manager.work().await });
+    tasks.spawn(async move { upbit_spot_manager.work().await });
     tasks.spawn(async move { core_mng.work().await });
 
     /* Timescale Insertion */
     if env_var.data_dump {
         tasks.spawn(async move {
             if let Err(e) =
-                timescale_batch_writer("binance", &env_var.table_fut, binance_fut.db.1).await
+                timescale_batch_writer("binance", &env_var.table_fut.clone(), system_fut.db.1).await
             {
                 error!("Timescale batch writer error: {}", e);
             }
@@ -105,83 +104,60 @@ async fn main() {
 
         tasks.spawn(async move {
             if let Err(e) =
-                timescale_batch_writer("binance", &env_var.table_spt, binance_spt.db.1).await
+                timescale_batch_writer("binance", &env_var.table_spt.clone(), system_spt.db.1).await
             {
                 error!("Timescale batch writer error: {}", e);
             }
         });
     }
 
-    /* Start Orderbook Container */
-    let mut binance_fbook = Orderbook::new(binance_fut.ob.raw.1, binance_fut.ob.mng.0);
-    tasks.spawn(async move { binance_fbook.listen().await });
-
-    let mut binance_sbook = Orderbook::new(binance_spt.ob.raw.1, binance_spt.ob.mng.0);
-    tasks.spawn(async move { binance_sbook.listen().await });
-
-    let mut upbit_sbook = Orderbook::new(upbit_spt.ob.raw.1, upbit_spt.ob.mng.0);
-    tasks.spawn(async move { upbit_sbook.listen().await });
-
     /* Start Data Streams */
-    let binance_future_aggtrade = BinanceFutureAggTradeStreamHandler::new(
-        env_var.symbol_binance_fut.clone(),
-        binance_fut.agg.0,
+    let binance_streams = BinanceStreams::new(
+        FutureChannels {
+            ob_raw_in: binance_fut.ob.raw.1,
+            ob_raw_out: binance_fut.ob.raw.0,
+            ob_mng_out: binance_fut.ob.mng.0,
+            agg_out: binance_fut.agg.0,
+            liq_out: binance_fut.additional.liq.0,
+            mark_out: binance_fut.additional.mark.0,
+        },
+        SpotChannels {
+            ob_raw_in: binance_spt.ob.raw.1,
+            ob_raw_out: binance_spt.ob.raw.0,
+            ob_mng_out: binance_spt.ob.mng.0,
+            agg_out: binance_spt.agg.0,
+        },
     );
-    tasks.spawn(spawn_future_aggtrade_task(binance_future_aggtrade));
-
-    let binance_future_liquidation = BinanceFutureLiquidationStreamHandler::new(
+    binance_streams.spawn_streams(
+        &mut tasks,
         env_var.symbol_binance_fut.clone(),
-        binance_fut.additional.liq.0,
-    );
-    tasks.spawn(spawn_liquidation_task(binance_future_liquidation));
-
-    let binance_future_markprice = BinanceFutureMarkPriceStreamHandler::new(
-        env_var.symbol_binance_fut.clone(),
-        binance_fut.additional.mark.0,
-    );
-    tasks.spawn(spawn_markprice_task(binance_future_markprice));
-
-    let binance_spot_aggtrade = BinanceSpotAggTradeStreamHandler::new(
         env_var.symbol_binance_spt.clone(),
-        binance_spt.agg.0,
     );
-    tasks.spawn(spawn_spot_aggtrade_task(binance_spot_aggtrade));
 
-    let upbit_spot_aggtrade_krw = UpbitSpotAggTradeStreamHandler::new(
-        env_var.symbol_upbit_krw.clone(),
-        upbit_spt.agg.0.clone(),
-    );
-    tasks.spawn(spawn_upbit_spot_aggtrade_task(upbit_spot_aggtrade_krw));
+    let upbit_krw_streams = UpbitStreams::new(SpotChannels {
+        ob_raw_in: upbit_spt_krw.ob.raw.1,
+        ob_raw_out: upbit_spt_krw.ob.raw.0,
+        ob_mng_out: upbit_spt_krw.ob.mng.0,
+        agg_out: upbit_spt_krw.agg.0,
+    });
 
-    let upbit_spot_aggtrade_btc = UpbitSpotAggTradeStreamHandler::new(
-        env_var.symbol_upbit_btc.clone(),
-        upbit_spt.agg.0.clone(),
-    );
-    tasks.spawn(spawn_upbit_spot_aggtrade_task(upbit_spot_aggtrade_btc));
+    let upbit_btc_streams = UpbitStreams::new(SpotChannels {
+        ob_raw_in: upbit_spt_btc.ob.raw.1,
+        ob_raw_out: upbit_spt_btc.ob.raw.0,
+        ob_mng_out: upbit_spt_btc.ob.mng.0,
+        agg_out: upbit_spt_btc.agg.0,
+    });
 
-    let upbit_spot_aggtrade_usdt = UpbitSpotAggTradeStreamHandler::new(
-        env_var.symbol_upbit_usdt.clone(),
-        upbit_spt.agg.0.clone(),
-    );
-    tasks.spawn(spawn_upbit_spot_aggtrade_task(upbit_spot_aggtrade_usdt));
+    let upbit_usdt_streams = UpbitStreams::new(SpotChannels {
+        ob_raw_in: upbit_spt_usdt.ob.raw.1,
+        ob_raw_out: upbit_spt_usdt.ob.raw.0,
+        ob_mng_out: upbit_spt_usdt.ob.mng.0,
+        agg_out: upbit_spt_usdt.agg.0,
+    });
 
-    let binance_future_orderbook = BinanceFutureOrderbookStreamHandler::new(
-        env_var.symbol_binance_fut.clone(),
-        binance_fut.ob.raw.0.clone(),
-    );
-    tasks.spawn(spawn_future_orderbook_task(binance_future_orderbook));
-
-    let binance_spot_orderbook = BinanceSpotOrderbookStreamHandler::new(
-        env_var.symbol_binance_spt.clone(),
-        binance_spt.ob.raw.0.clone(),
-    );
-    tasks.spawn(spawn_spot_orderbook_task(binance_spot_orderbook));
-
-    let upbit_spot_orderbook = UpbitSpotOrderbookStreamHandler::new(
-        env_var.symbol_binance_spt.clone(),
-        upbit_spt.ob.raw.0.clone(),
-    );
-    tasks.spawn(spawn_upbit_spot_orderbook_task(upbit_spot_orderbook));
+    upbit_krw_streams.spawn_streams(&mut tasks, env_var.symbol_upbit_krw.clone());
+    upbit_btc_streams.spawn_streams(&mut tasks, env_var.symbol_upbit_btc.clone());
+    upbit_usdt_streams.spawn_streams(&mut tasks, env_var.symbol_upbit_usdt.clone());
 
     /* Graceful Shutdown */
     tokio::select! {
@@ -202,93 +178,4 @@ async fn main() {
         // Wait for all tasks to complete or be aborted
     }
     info!("Shutdown complete");
-}
-
-// Helper functions to create the reconnection tasks
-async fn spawn_future_aggtrade_task(handler: BinanceFutureAggTradeStreamHandler) {
-    loop {
-        warn!("Attempting to connect to Binance Aggtrades");
-        if let Err(e) = handler.connect().await {
-            error!("Binance Aggtrades connection error: {}", e);
-        }
-        warn!("Binance Aggtrades: Retrying in 5 seconds");
-        tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
-    }
-}
-
-async fn spawn_spot_aggtrade_task(handler: BinanceSpotAggTradeStreamHandler) {
-    loop {
-        warn!("Attempting to connect to Binance Aggtrades");
-        if let Err(e) = handler.connect().await {
-            error!("Binance Aggtrades connection error: {}", e);
-        }
-        warn!("Binance Aggtrades: Retrying in 5 seconds");
-        tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
-    }
-}
-
-async fn spawn_upbit_spot_aggtrade_task(handler: UpbitSpotAggTradeStreamHandler) {
-    loop {
-        warn!("Attempting to connect to Upbit Aggtrades");
-        if let Err(e) = handler.connect().await {
-            error!("Upbit Aggtrades connection error: {}", e);
-        }
-        warn!("Upbit Aggtrades: Retrying in 5 seconds");
-        tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
-    }
-}
-
-async fn spawn_future_orderbook_task(handler: BinanceFutureOrderbookStreamHandler) {
-    loop {
-        warn!("Attempting to connect to Binance");
-        if let Err(e) = handler.connect().await {
-            error!("Binance connection error: {}", e);
-        }
-        warn!("Binance: Retrying in 5 seconds");
-        tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
-    }
-}
-
-async fn spawn_spot_orderbook_task(handler: BinanceSpotOrderbookStreamHandler) {
-    loop {
-        warn!("Attempting to connect to Binance Spot");
-        if let Err(e) = handler.connect().await {
-            error!("Binance Spot connection error: {}", e);
-        }
-        warn!("Binance Spot: Retrying in 5 seconds");
-        tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
-    }
-}
-
-async fn spawn_upbit_spot_orderbook_task(handler: UpbitSpotOrderbookStreamHandler) {
-    loop {
-        warn!("Attempting to connect to Upbit Spot");
-        if let Err(e) = handler.connect().await {
-            error!("Upbit Spot connection error: {}", e);
-        }
-        warn!("Upbit Spot: Retrying in 5 seconds");
-        tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
-    }
-}
-
-async fn spawn_liquidation_task(handler: BinanceFutureLiquidationStreamHandler) {
-    loop {
-        warn!("Attempting to connect to Binance Liquidation");
-        if let Err(e) = handler.connect().await {
-            error!("Binance Liquidation connection error: {}", e);
-        }
-        warn!("Binance Liquidation: Retrying in 5 seconds");
-        tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
-    }
-}
-
-async fn spawn_markprice_task(handler: BinanceFutureMarkPriceStreamHandler) {
-    loop {
-        warn!("Attempting to connect to Binance Mark Price");
-        if let Err(e) = handler.connect().await {
-            error!("Binance Mark Price connection error: {}", e);
-        }
-        warn!("Binance Mark Price: Retrying in 5 seconds");
-        tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
-    }
 }

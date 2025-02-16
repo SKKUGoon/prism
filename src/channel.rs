@@ -17,19 +17,21 @@ pub struct OrderbookChannel {
     pub mng: (mpsc::Sender<OrderbookData>, mpsc::Receiver<OrderbookData>),
 }
 
-pub struct ChannelPairs<Channel> {
+pub struct DataChannelPairs<Channel> {
     // Data Channel: Orderbook -> Engine
     pub ob: OrderbookChannel,
     // Data Channel: Aggtrade -> Engine
     pub agg: (mpsc::Sender<MarketData>, mpsc::Receiver<MarketData>),
     // Data Channel: Mark Price -> Engine, Liquidation -> Engine
     pub additional: Channel,
+}
+
+pub struct SystemChannelPairs {
     // Engine Channel: Engine -> Executor
     pub exec: (
         mpsc::Sender<FeatureProcessed>,
         mpsc::Receiver<FeatureProcessed>,
     ),
-    // Executor Channel: Executor -> Database
     pub db: (
         mpsc::Sender<FeatureProcessed>,
         mpsc::Receiver<FeatureProcessed>,
@@ -47,16 +49,14 @@ pub struct Future {
     ),
 }
 
-pub type SpotChannel = ChannelPairs<Spot>;
-pub type FutureChannel = ChannelPairs<Future>;
+pub type SpotChannel = DataChannelPairs<Spot>;
+pub type FutureChannel = DataChannelPairs<Future>;
 
 impl SpotChannel {
     pub fn new(max_capacity: usize) -> Self {
         let (tx_ob_raw, rx_ob_raw) = mpsc::channel(max_capacity);
         let (tx_ob_mng, rx_ob_mng) = mpsc::channel(max_capacity);
         let (tx_agg, rx_agg) = mpsc::channel(max_capacity);
-        let (tx_exec, rx_exec) = mpsc::channel(max_capacity);
-        let (tx_db, rx_db) = mpsc::channel(max_capacity);
 
         Self {
             ob: OrderbookChannel {
@@ -65,8 +65,6 @@ impl SpotChannel {
             },
             agg: (tx_agg, rx_agg),
             additional: Spot,
-            exec: (tx_exec, rx_exec),
-            db: (tx_db, rx_db),
         }
     }
 }
@@ -78,8 +76,6 @@ impl FutureChannel {
         let (tx_agg, rx_agg) = mpsc::channel(max_capacity);
         let (tx_mark, rx_mark) = mpsc::channel(max_capacity);
         let (tx_liq, rx_liq) = mpsc::channel(max_capacity);
-        let (tx_exec, rx_exec) = mpsc::channel(max_capacity);
-        let (tx_db, rx_db) = mpsc::channel(max_capacity);
 
         Self {
             ob: OrderbookChannel {
@@ -91,6 +87,16 @@ impl FutureChannel {
                 mark: (tx_mark, rx_mark),
                 liq: (tx_liq, rx_liq),
             },
+        }
+    }
+}
+
+impl SystemChannelPairs {
+    pub fn new(max_capacity: usize) -> Self {
+        let (tx_exec, rx_exec) = mpsc::channel(max_capacity);
+        let (tx_db, rx_db) = mpsc::channel(max_capacity);
+
+        Self {
             exec: (tx_exec, rx_exec),
             db: (tx_db, rx_db),
         }
