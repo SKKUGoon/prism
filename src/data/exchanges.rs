@@ -6,7 +6,7 @@ use crate::data::{
 };
 use tokio::sync::mpsc;
 
-pub struct FutureChannels {
+pub struct FutureDataChannels {
     pub ob_raw_in: mpsc::Receiver<OrderbookUpdateStream>,
     pub ob_raw_out: mpsc::Sender<OrderbookUpdateStream>,
     pub ob_mng_out: mpsc::Sender<OrderbookData>,
@@ -15,7 +15,7 @@ pub struct FutureChannels {
     pub mark_out: mpsc::Sender<MarkPriceData>,
 }
 
-pub struct SpotChannels {
+pub struct SpotDataChannels {
     pub ob_raw_in: mpsc::Receiver<OrderbookUpdateStream>,
     pub ob_raw_out: mpsc::Sender<OrderbookUpdateStream>,
     pub ob_mng_out: mpsc::Sender<OrderbookData>,

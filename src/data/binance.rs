@@ -1,5 +1,5 @@
 use crate::data::{
-    exchanges::{FutureChannels, SpotChannels},
+    exchanges::{FutureDataChannels, SpotDataChannels},
     liquidation::binance_liquidation_future::BinanceFutureLiquidationStreamHandler,
     market::{
         binance_aggtrade_future::BinanceFutureAggTradeStreamHandler,
@@ -16,12 +16,12 @@ use log::{error, warn};
 use tokio::task::JoinSet;
 
 pub struct BinanceStreams {
-    future: FutureChannels,
-    spot: SpotChannels,
+    future: FutureDataChannels,
+    spot: SpotDataChannels,
 }
 
 impl BinanceStreams {
-    pub fn new(future: FutureChannels, spot: SpotChannels) -> Self {
+    pub fn new(future: FutureDataChannels, spot: SpotDataChannels) -> Self {
         Self { future, spot }
     }
 

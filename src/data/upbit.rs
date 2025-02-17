@@ -1,5 +1,5 @@
 use crate::data::{
-    exchanges::SpotChannels,
+    exchanges::SpotDataChannels,
     market::upbit_aggtrade_spot::UpbitSpotAggTradeStreamHandler,
     orderbook::{book::Orderbook, upbit_orderbook_spot::UpbitSpotOrderbookStreamHandler},
     stream::StreamHandler,
@@ -8,11 +8,11 @@ use log::{error, warn};
 use tokio::task::JoinSet;
 
 pub struct UpbitStreams {
-    spot: SpotChannels,
+    spot: SpotDataChannels,
 }
 
 impl UpbitStreams {
-    pub fn new(spot: SpotChannels) -> Self {
+    pub fn new(spot: SpotDataChannels) -> Self {
         Self { spot }
     }
 
