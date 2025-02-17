@@ -7,7 +7,7 @@ use std::future::Future;
 use tokio::sync::mpsc;
 use tokio_tungstenite::{
     connect_async,
-    tungstenite::{self, Message},
+    tungstenite::{self, Bytes, Message},
 };
 
 /* Upbit AggTrade(Trade) Stream */
@@ -83,29 +83,45 @@ impl UpbitSpotAggTradeStreamHandler {
             return;
         }
 
-        while let Some(msg) = read.next().await {
-            match msg {
-                Ok(Message::Binary(binary)) => {
-                    match serde_json::from_slice::<UpbitWebsocketSpotAggTrade>(&binary) {
-                        Ok(trade) => {
-                            let update = self.generate_aggtrade_update(&trade);
-                            if let Err(e) = self.tx.send(update).await {
-                                error!("Failed to send trade update: {}", e);
+        // Upbit requires a ping every 60 seconds
+        // It will terminate the connection if no data transmission is detected for 120 seconds
+        // https://docs.upbit.com/reference/connection
+        let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(60));
+
+        loop {
+            tokio::select! {
+                _ = interval.tick() => {
+                    if let Err(e) = write.send(Message::Ping(Bytes::from_static(&[]))).await {
+                        error!("Failed to send ping: {}", e);
+                        break;
+                    }
+                }
+                msg = read.next() => {
+                    match msg {
+                        Some(Ok(Message::Binary(binary))) => {
+                            match serde_json::from_slice::<UpbitWebsocketSpotAggTrade>(&binary) {
+                                Ok(trade) => {
+                                    let update = self.generate_aggtrade_update(&trade);
+                                    if let Err(e) = self.tx.send(update).await {
+                                        error!("Failed to send trade update: {}", e);
+                                    }
+                                }
+                                Err(e) => error!("Failed to parse binary trade data: {}", e),
                             }
                         }
-                        Err(e) => error!("Failed to parse binary trade data: {}", e),
+                        Some(Ok(Message::Ping(payload))) => {
+                            if let Err(e) = write.send(Message::Pong(payload)).await {
+                                error!("Failed to send Pong: {}", e);
+                            }
+                        }
+                        Some(Ok(Message::Pong(_))) => info!("Upbit aggtrade stream: Pong received"),
+                        Some(Ok(_)) => {} // Ignore other message types
+                        Some(Err(e)) => {
+                            error!("WebSocket error: {}", e);
+                            break;
+                        }
+                        None => break,
                     }
-                }
-                Ok(Message::Ping(payload)) => {
-                    if let Err(e) = write.send(Message::Pong(payload)).await {
-                        error!("Failed to send Pong: {}", e);
-                    }
-                }
-                Ok(Message::Pong(_)) => info!("Upbit aggtrade stream: Pong received"),
-                Ok(_) => {} // Ignore other message types
-                Err(e) => {
-                    error!("WebSocket error: {}", e);
-                    break;
                 }
             }
         }

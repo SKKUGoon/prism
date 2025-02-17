@@ -6,7 +6,7 @@ use std::future::Future;
 use tokio::sync::mpsc;
 use tokio_tungstenite::{
     connect_async,
-    tungstenite::{self, Message},
+    tungstenite::{self, Bytes, Message},
 };
 
 /* Upbit Orderbook Stream */
@@ -88,36 +88,52 @@ impl UpbitSpotOrderbookStreamHandler {
             return;
         }
 
-        while let Some(msg) = read.next().await {
-            match msg {
-                Ok(Message::Binary(binary)) => {
-                    match serde_json::from_slice::<UpbitWebsocketSpotOrderbook>(&binary) {
-                        Ok(orderbook) => {
-                            // Snapshot handling
-                            if orderbook.stream_type == "SNAPSHOT" {
-                                // Send processed upbit update to tx
-                                let update = self.generate_orderbook_update(&orderbook);
-                                if let Err(e) = self.tx.send(update).await {
-                                    error!("Failed to send orderbook update: {}", e);
+        // Upbit requires a ping every 60 seconds
+        // It will terminate the connection if no data transmission is detected for 120 seconds
+        // https://docs.upbit.com/reference/connection
+        let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(60));
+
+        loop {
+            tokio::select! {
+                _ = interval.tick() => {
+                    if let Err(e) = write.send(Message::Ping(Bytes::from_static(&[]))).await {
+                        error!("Failed to send ping: {}", e);
+                        break;
+                    }
+                }
+
+                msg = read.next() => {
+                    match msg {
+                        Some(Ok(Message::Binary(binary))) => {
+                            match serde_json::from_slice::<UpbitWebsocketSpotOrderbook>(&binary) {
+                                Ok(orderbook) => {
+                                    // Snapshot handling
+                                    if orderbook.stream_type == "SNAPSHOT" {
+                                        // Send processed upbit update to tx
+                                        let update = self.generate_orderbook_update(&orderbook);
+                                        if let Err(e) = self.tx.send(update).await {
+                                            error!("Failed to send orderbook update: {}", e);
+                                        }
+                                    } else {
+                                        // Real time
+                                    }
                                 }
-                            } else {
-                                // Real time
+                                Err(e) => error!("Failed to parse binary orderbook data: {}", e),
                             }
                         }
-                        Err(e) => error!("Failed to parse binary orderbook data: {}", e),
+                        Some(Ok(Message::Ping(payload))) => {
+                            if let Err(e) = write.send(Message::Pong(payload)).await {
+                                error!("Failed to send Pong: {}", e);
+                            }
+                        }
+                        Some(Ok(Message::Pong(_))) => info!("Upbit orderbook stream: Pong received"),
+                        Some(Ok(Message::Close(_))) => {
+                            info!("Upbit orderbook stream: Connection closed");
+                            break;
+                        }
+                        _ => (), // Ignore other message types
                     }
                 }
-                Ok(Message::Ping(payload)) => {
-                    if let Err(e) = write.send(Message::Pong(payload)).await {
-                        error!("Failed to send Pong: {}", e);
-                    }
-                }
-                Ok(Message::Pong(_)) => info!("Upbit orderbook stream: Pong received"),
-                Ok(Message::Close(_)) => {
-                    info!("Upbit orderbook stream: Connection closed");
-                    break;
-                }
-                _ => (), // Ignore other message types
             }
         }
     }
