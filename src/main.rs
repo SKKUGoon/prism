@@ -1,6 +1,6 @@
 use crate::data::{
     binance::BinanceStreams,
-    exchanges::{FutureChannels, SpotChannels},
+    exchanges::{FutureDataChannels, SpotDataChannels},
     upbit::UpbitStreams,
 };
 use channel::{FutureChannel, SpotChannel, SystemChannelPairs};
@@ -8,8 +8,11 @@ use config::read_env_config;
 use database::postgres::timescale_batch_writer;
 use log::{error, info, warn};
 use prism::{
-    executor::{PrismConfig, PrismTradeManager},
     stream::{future::FutureStream, spot::SpotStream, FutureReceivers},
+    trade::{
+        binance::BinanceFeatureProcessed, manager::TradeManager, upbit::UpbitFeatureProcessed,
+        TradeConfig,
+    },
 };
 use tokio::signal;
 
@@ -18,7 +21,6 @@ mod config;
 mod data;
 mod database;
 mod prism;
-mod trade;
 
 /*
 (1) Data flows like:
@@ -48,10 +50,11 @@ async fn main() {
     let upbit_spt_btc = SpotChannel::new(env_var.channel_capacity);
     let upbit_spt_usdt = SpotChannel::new(env_var.channel_capacity);
 
-    let system_fut = SystemChannelPairs::new(env_var.channel_capacity);
-    let system_spt = SystemChannelPairs::new(env_var.channel_capacity);
-
-    // let binance_streams = BinanceStreams::new(binance_fut, binance_spt);
+    let binance_sys_fut = SystemChannelPairs::new(env_var.channel_capacity);
+    let binance_sys_spt = SystemChannelPairs::new(env_var.channel_capacity);
+    let upbit_krw_sys_spt = SystemChannelPairs::new(env_var.channel_capacity);
+    let upbit_btc_sys_spt = SystemChannelPairs::new(env_var.channel_capacity);
+    let upbit_usdt_sys_spt = SystemChannelPairs::new(env_var.channel_capacity);
 
     /* Start stream managers */
     let mut binance_future_manager = FutureStream::new(
@@ -61,42 +64,59 @@ async fn main() {
             rx_markprice: binance_fut.additional.mark.1,
             rx_liquidation: binance_fut.additional.liq.1,
         },
-        system_fut.exec.0,
+        binance_sys_fut.exec.0,
     );
     let mut binance_spot_manager = SpotStream::new(
         binance_spt.ob.mng.1,
         binance_spt.agg.1,
-        system_spt.exec.0.clone(),
+        binance_sys_spt.exec.0.clone(),
     );
-    let mut upbit_spot_manager = SpotStream::new(
+    let mut upbit_krw_spot_manager = SpotStream::new(
         upbit_spt_krw.ob.mng.1,
         upbit_spt_krw.agg.1,
-        system_spt.exec.0.clone(),
+        upbit_krw_sys_spt.exec.0.clone(),
+    );
+    let mut upbit_btc_spot_manager = SpotStream::new(
+        upbit_spt_btc.ob.mng.1,
+        upbit_spt_btc.agg.1,
+        upbit_btc_sys_spt.exec.0.clone(),
+    );
+    let mut upbit_usdt_spot_manager = SpotStream::new(
+        upbit_spt_usdt.ob.mng.1,
+        upbit_spt_usdt.agg.1,
+        upbit_usdt_sys_spt.exec.0.clone(),
     );
 
     /* Start Data Manager */
-    let mut core_config = PrismConfig::default();
+    let mut core_config = TradeConfig::default();
     core_config.enable_data_dump(env_var.data_dump);
-
-    let mut core_mng = PrismTradeManager::new(
+    let mut trade_mng = TradeManager::new(
+        BinanceFeatureProcessed {
+            futures: binance_sys_fut.exec.1,
+            spot: binance_sys_spt.exec.1,
+        },
+        UpbitFeatureProcessed {
+            krw: upbit_krw_sys_spt.exec.1,
+            btc: upbit_btc_sys_spt.exec.1,
+            usdt: upbit_usdt_sys_spt.exec.1,
+        },
         core_config,
-        system_fut.exec.1,
-        system_spt.exec.1,
-        system_fut.db.0,
-        system_spt.db.0,
     );
 
-    /* Feature Creation Engine Start */
+    /* Feature Creation Engine */
     tasks.spawn(async move { binance_future_manager.work().await });
     tasks.spawn(async move { binance_spot_manager.work().await });
-    tasks.spawn(async move { upbit_spot_manager.work().await });
-    tasks.spawn(async move { core_mng.work().await });
+    tasks.spawn(async move { upbit_krw_spot_manager.work().await });
+    tasks.spawn(async move { upbit_btc_spot_manager.work().await });
+    tasks.spawn(async move { upbit_usdt_spot_manager.work().await });
+    tasks.spawn(async move { trade_mng.work().await });
 
     /* Timescale Insertion */
     if env_var.data_dump {
         tasks.spawn(async move {
             if let Err(e) =
-                timescale_batch_writer("binance", &env_var.table_fut.clone(), system_fut.db.1).await
+                timescale_batch_writer("binance", &env_var.table_fut.clone(), binance_sys_fut.db.1)
+                    .await
             {
                 error!("Timescale batch writer error: {}", e);
             }
@@ -104,7 +124,8 @@ async fn main() {
 
         tasks.spawn(async move {
             if let Err(e) =
-                timescale_batch_writer("binance", &env_var.table_spt.clone(), system_spt.db.1).await
+                timescale_batch_writer("binance", &env_var.table_spt.clone(), binance_sys_spt.db.1)
+                    .await
             {
                 error!("Timescale batch writer error: {}", e);
             }
@@ -113,7 +134,7 @@ async fn main() {
 
     /* Start Data Streams */
     let binance_streams = BinanceStreams::new(
-        FutureChannels {
+        FutureDataChannels {
             ob_raw_in: binance_fut.ob.raw.1,
             ob_raw_out: binance_fut.ob.raw.0,
             ob_mng_out: binance_fut.ob.mng.0,
@@ -121,7 +142,7 @@ async fn main() {
             liq_out: binance_fut.additional.liq.0,
             mark_out: binance_fut.additional.mark.0,
         },
-        SpotChannels {
+        SpotDataChannels {
             ob_raw_in: binance_spt.ob.raw.1,
             ob_raw_out: binance_spt.ob.raw.0,
             ob_mng_out: binance_spt.ob.mng.0,
@@ -134,21 +155,21 @@ async fn main() {
         env_var.symbol_binance_spt.clone(),
     );
 
-    let upbit_krw_streams = UpbitStreams::new(SpotChannels {
+    let upbit_krw_streams = UpbitStreams::new(SpotDataChannels {
         ob_raw_in: upbit_spt_krw.ob.raw.1,
         ob_raw_out: upbit_spt_krw.ob.raw.0,
         ob_mng_out: upbit_spt_krw.ob.mng.0,
         agg_out: upbit_spt_krw.agg.0,
     });
 
-    let upbit_btc_streams = UpbitStreams::new(SpotChannels {
+    let upbit_btc_streams = UpbitStreams::new(SpotDataChannels {
         ob_raw_in: upbit_spt_btc.ob.raw.1,
         ob_raw_out: upbit_spt_btc.ob.raw.0,
         ob_mng_out: upbit_spt_btc.ob.mng.0,
         agg_out: upbit_spt_btc.agg.0,
     });
 
-    let upbit_usdt_streams = UpbitStreams::new(SpotChannels {
+    let upbit_usdt_streams = UpbitStreams::new(SpotDataChannels {
         ob_raw_in: upbit_spt_usdt.ob.raw.1,
         ob_raw_out: upbit_spt_usdt.ob.raw.0,
         ob_mng_out: upbit_spt_usdt.ob.mng.0,
