@@ -131,6 +131,7 @@ pub trait VolumeDelta {
 
 // Re-export specific bar types
 pub mod dollar_imbalance;
+pub mod manager;
 pub mod tick_imbalance;
 pub mod volume_imbalance;
 
