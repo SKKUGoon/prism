@@ -76,6 +76,10 @@ impl SpotStream {
                         self.processed.obi_range.0 = fut_ob_data.orderbook_imbalance_slack(self.processed.price, 0.005);
                         self.processed.obi_range.1 = fut_ob_data.orderbook_imbalance_slack(self.processed.price, 0.01);
 
+                        let (bid_activity, ask_activity) = fut_ob_data.near_price_bid_ask_activity(self.processed.price, 0.001);
+                        self.processed.near_price_bids = bid_activity;
+                        self.processed.near_price_asks = ask_activity;
+
                         if self.tx_feature.send(self.processed.clone()).await.is_err() {
                             error!("Failed to send feature to executor");
                         }
