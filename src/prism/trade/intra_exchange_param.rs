@@ -1,6 +1,7 @@
 use crate::prism::{bar::manager::BarManager, stream::FeatureProcessed};
+use std::collections::HashMap;
 
-pub struct Params {
+pub struct IntraParams {
     pub price: Option<f32>,
     // 1. Time bar
     pub vwap: Option<f32>,
@@ -20,9 +21,12 @@ pub struct Params {
     pub dollar_imbalance_thres: Option<f32>,
     // 5. Bar History Manager
     pub bars: BarManager,
+    // 6. Orderbook
+    pub bid_diff: HashMap<String, String>,
+    pub ask_diff: HashMap<String, String>,
 }
 
-impl Params {
+impl IntraParams {
     pub fn new(historical_bars: usize) -> Self {
         Self {
             price: None,
@@ -39,6 +43,8 @@ impl Params {
             dollar_imbalance: None,
             dollar_imbalance_thres: None,
             bars: BarManager::new(historical_bars),
+            bid_diff: HashMap::new(),
+            ask_diff: HashMap::new(),
         }
     }
 
@@ -68,5 +74,8 @@ impl Params {
         self.dollar_cvd = Some(data.dollar_imbalance_bar.cvd);
         self.dollar_imbalance = Some(data.dollar_imbalance);
         self.dollar_imbalance_thres = Some(data.dollar_imbalance_thres);
+
+        self.bid_diff = data.near_price_bids.clone();
+        self.ask_diff = data.near_price_asks.clone();
     }
 }

@@ -1,7 +1,15 @@
 pub mod binance;
+pub mod inter_exchange_param;
+pub mod intra_exchange_param;
 pub mod manager;
-pub mod param;
+pub mod strategy;
 pub mod upbit;
+
+#[derive(Debug, Clone, Copy)]
+pub enum LongShort {
+    Long,
+    Short,
+}
 
 pub struct TradeConfig {
     leverage: u8,

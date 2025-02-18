@@ -1,12 +1,10 @@
-use crate::prism::{
-    stream::FeatureProcessed,
-    trade::{
-        binance::BinanceFeatureProcessed, param::Params, upbit::UpbitFeatureProcessed, TradeConfig,
-    },
+use crate::prism::trade::{
+    binance::BinanceFeatureProcessed, intra_exchange_param::IntraParams,
+    upbit::UpbitFeatureProcessed, TradeConfig,
 };
-use log::info;
 use tokio::select;
-// use tokio::sync::mpsc;
+
+use super::strategy::snipe_large_order::SnipeLargeOrderStrategy;
 
 pub struct TradeManager {
     config: TradeConfig,
@@ -16,9 +14,9 @@ pub struct TradeManager {
     upbit: UpbitFeatureProcessed,
 
     // Parameters
-    binance_futures: Params,
-    binance_spot: Params,
-    upbit_spot: Params,
+    binance_futures: IntraParams,
+    binance_spot: IntraParams,
+    upbit_spot: IntraParams,
 }
 
 impl TradeManager {
@@ -31,29 +29,48 @@ impl TradeManager {
             config,
             binance: binance_ch,
             upbit: upbit_ch,
-            binance_futures: Params::new(100),
-            binance_spot: Params::new(100),
-            upbit_spot: Params::new(100),
+            binance_futures: IntraParams::new(100),
+            binance_spot: IntraParams::new(100),
+            upbit_spot: IntraParams::new(100),
         }
     }
 
     pub async fn work(&mut self) {
+        // Setup strategies
+        let mut binance_futures_snipe_large_order =
+            SnipeLargeOrderStrategy::new("Binance Futures".to_string(), 5000.0);
+        let mut binance_spot_snipe_large_order =
+            SnipeLargeOrderStrategy::new("Binance Spot".to_string(), 5000.0);
+        let mut upbit_krw_spot_snipe_large_order =
+            SnipeLargeOrderStrategy::new("Upbit Spot".to_string(), 500.0);
+
         loop {
             select! {
                 Some(feature) = self.binance.futures.recv() => {
-                    // info!("Binance Futures Feature: {:?}", feature);
+                    self.binance_futures.update_params(&feature);
+                    self.binance_futures.update_bars(&feature);
+
+                    binance_futures_snipe_large_order.evaluate(&self.binance_futures);
                 }
                 Some(feature) = self.binance.spot.recv() => {
-                    // info!("Binance Spot Feature: {:?}", feature);
+                    self.binance_spot.update_params(&feature);
+                    self.binance_spot.update_bars(&feature);
+
+                    binance_spot_snipe_large_order.evaluate(&self.binance_spot);
                 }
                 Some(feature) = self.upbit.krw.recv() => {
-                    // info!("Upbit KRW Feature: {:?}", feature);
+                    self.upbit_spot.update_params(&feature);
+                    self.upbit_spot.update_bars(&feature);
+
+                    upbit_krw_spot_snipe_large_order.evaluate(&self.upbit_spot);
                 }
                 Some(feature) = self.upbit.btc.recv() => {
-                    info!("Upbit BTC Feature: {:?}", feature);
+                    self.upbit_spot.update_params(&feature);
+                    self.upbit_spot.update_bars(&feature);
                 }
                 Some(feature) = self.upbit.usdt.recv() => {
-                    info!("Upbit USDT Feature: {:?}", feature);
+                    self.upbit_spot.update_params(&feature);
+                    self.upbit_spot.update_bars(&feature);
                 }
             }
         }
