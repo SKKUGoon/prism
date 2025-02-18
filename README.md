@@ -113,7 +113,7 @@ The system uses a sophisticated channel system for inter-thread communication:
 
 ## Flow
 
-![Flow](Prism_Engine_Flow_Design.png)
+![Flow](prism.png)
 
 
 ## Question
