@@ -5,6 +5,7 @@ use crate::data::{
     orderbook::book::OrderbookData,
 };
 use crate::prism::bar::{DollarImbalanceBar, TickImbalanceBar, VolumeImbalanceBar};
+use std::collections::HashMap;
 use tokio::sync::mpsc::{Receiver, Sender};
 
 #[derive(Debug, Clone)]
@@ -41,6 +42,10 @@ pub struct FeatureProcessed {
     pub obi: f32,
     // Ranged Orderbook imbalance
     pub obi_range: (f32, f32),
+    // Near-Price Orderbook (0.01%) Activity
+    // Difference
+    pub near_price_bids: HashMap<String, String>,
+    pub near_price_asks: HashMap<String, String>,
 
     // Latest processed tick imbalance bar (Historical)
     pub tick_imbalance_bar: TickImbalanceBar,
@@ -108,6 +113,8 @@ impl FeatureProcessed {
             ob_spread: 0.0,
             obi: -f32::INFINITY, // Should be inside -1 < obi < 1
             obi_range: (0.0, 0.0),
+            near_price_bids: HashMap::new(),
+            near_price_asks: HashMap::new(),
 
             // Information bars
             tick_imbalance_bar: TickImbalanceBar::new(), // Initialize single tick imbalance bar
