@@ -1,7 +1,7 @@
 use crate::data::market::MarketData;
 use std::collections::VecDeque;
 
-// Common traits and structures
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct Bar {
     pub id: String,
@@ -33,6 +33,7 @@ pub struct Bar {
     candle_opened: bool,
 }
 
+#[allow(dead_code)]
 impl Bar {
     pub fn new() -> Self {
         Self {
