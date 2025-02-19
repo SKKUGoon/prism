@@ -1,4 +1,6 @@
-use crate::prism::trade::{intra_exchange_param::IntraParams, LongShort};
+use crate::prism::trade::intra_exchange_param::IntraParams;
+
+pub mod data;
 
 #[derive(Debug, Clone)]
 pub struct SnipeLargeOrderParams {
@@ -15,6 +17,8 @@ pub struct SnipeLargeOrderParams {
     market_sell_size: f32,
 }
 
+#[allow(dead_code)]
+#[derive(Debug, Clone)]
 pub struct SnipeLargeOrderStrategy {
     pub source: String,
     // TODO: Determine Large Number Threshold
@@ -34,11 +38,6 @@ impl SnipeLargeOrderStrategy {
     }
 
     pub fn evaluate(&mut self, data: &IntraParams) -> Option<SnipeLargeOrderParams> {
-        // TODO: Remove
-        if self.source != "Upbit Spot" {
-            return None;
-        }
-
         if data.bid_diff.is_empty() || data.ask_diff.is_empty() {
             return None;
         }
