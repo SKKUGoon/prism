@@ -123,12 +123,7 @@ impl FutureStream {
                     self.processed.liquidation_side = "".to_string();
                     self.processed.liquidation_dvolume = 0.0;
                 }
-
-                else => {
-                    // All channels have been closed
-                    error!("All channels have been closed, stopping the future stream");
-                    break;
-                }
+                else => {}
             }
         }
     }

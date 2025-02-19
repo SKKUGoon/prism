@@ -85,12 +85,7 @@ impl SpotStream {
                         }
                     }
                 }
-
-                else => {
-                    // All channels have been closed
-                    error!("All channels have been closed, stopping the spot stream");
-                    break;
-                }
+                else => {}
             }
         }
     }
