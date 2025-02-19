@@ -3,6 +3,7 @@ use std::collections::HashMap;
 
 pub struct IntraParams {
     pub price: Option<f32>,
+    pub data_time: Option<u64>,
     // 1. Time bar
     pub vwap: Option<f32>,
     // 2. Tick bar
@@ -30,6 +31,7 @@ impl IntraParams {
     pub fn new(historical_bars: usize) -> Self {
         Self {
             price: None,
+            data_time: None,
             vwap: None,
             tick_vwap: None,
             tick_imbalance: None,
@@ -59,6 +61,7 @@ impl IntraParams {
 
     pub fn update_params(&mut self, data: &FeatureProcessed) {
         self.price = Some(data.price);
+        self.data_time = Some(data.trade_time);
         self.vwap = None;
 
         self.tick_vwap = Some(data.tick_imbalance_vwap);

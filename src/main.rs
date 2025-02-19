@@ -47,8 +47,6 @@ async fn main() {
     let binance_spt = SpotChannel::new(env_var.channel_capacity);
 
     let upbit_spt_krw = SpotChannel::new(env_var.channel_capacity);
-    let upbit_spt_btc = SpotChannel::new(env_var.channel_capacity);
-    let upbit_spt_usdt = SpotChannel::new(env_var.channel_capacity);
 
     let binance_sys_fut = SystemChannelPairs::new(env_var.channel_capacity);
     let binance_sys_spt = SystemChannelPairs::new(env_var.channel_capacity);
@@ -76,16 +74,6 @@ async fn main() {
         upbit_spt_krw.agg.1,
         upbit_krw_sys_spt.exec.0.clone(),
     );
-    let mut upbit_btc_spot_manager = SpotStream::new(
-        upbit_spt_btc.ob.mng.1,
-        upbit_spt_btc.agg.1,
-        upbit_btc_sys_spt.exec.0.clone(),
-    );
-    let mut upbit_usdt_spot_manager = SpotStream::new(
-        upbit_spt_usdt.ob.mng.1,
-        upbit_spt_usdt.agg.1,
-        upbit_usdt_sys_spt.exec.0.clone(),
-    );
 
     /* Start Data Manager */
     let mut core_config = TradeConfig::default();
@@ -107,8 +95,6 @@ async fn main() {
     tasks.spawn(async move { binance_future_manager.work().await });
     tasks.spawn(async move { binance_spot_manager.work().await });
     tasks.spawn(async move { upbit_krw_spot_manager.work().await });
-    tasks.spawn(async move { upbit_btc_spot_manager.work().await });
-    tasks.spawn(async move { upbit_usdt_spot_manager.work().await });
     tasks.spawn(async move { trade_mng.work().await });
 
     /* Timescale Insertion */
@@ -162,23 +148,7 @@ async fn main() {
         agg_out: upbit_spt_krw.agg.0,
     });
 
-    let upbit_btc_streams = UpbitStreams::new(SpotDataChannels {
-        ob_raw_in: upbit_spt_btc.ob.raw.1,
-        ob_raw_out: upbit_spt_btc.ob.raw.0,
-        ob_mng_out: upbit_spt_btc.ob.mng.0,
-        agg_out: upbit_spt_btc.agg.0,
-    });
-
-    let upbit_usdt_streams = UpbitStreams::new(SpotDataChannels {
-        ob_raw_in: upbit_spt_usdt.ob.raw.1,
-        ob_raw_out: upbit_spt_usdt.ob.raw.0,
-        ob_mng_out: upbit_spt_usdt.ob.mng.0,
-        agg_out: upbit_spt_usdt.agg.0,
-    });
-
     upbit_krw_streams.spawn_streams(&mut tasks, env_var.symbol_upbit_krw.clone());
-    upbit_btc_streams.spawn_streams(&mut tasks, env_var.symbol_upbit_btc.clone());
-    upbit_usdt_streams.spawn_streams(&mut tasks, env_var.symbol_upbit_usdt.clone());
 
     /* Graceful Shutdown */
     tokio::select! {

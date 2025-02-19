@@ -31,7 +31,7 @@ impl SpotStream {
                     self.processed.price = mkt_data.price;
 
                     // Update event type
-                    self.processed.event_type = Some("AggTrade".to_string());
+                    self.processed.event_type = Some("AGGTRADE".to_string());
 
                     // Update maker/taker quantity
                     match mkt_data.buyer_market_maker {
@@ -62,7 +62,7 @@ impl SpotStream {
                 Some(mut ob_data) = self.rx_orderbook.recv() => {
                     if self.processed.price > 0.0 {
                         // Update event type
-                        self.processed.event_type = Some("Orderbook".to_string());
+                        self.processed.event_type = Some("ORDERBOOK".to_string());
 
                         // Update feature time
                         self.processed.trade_time = ob_data.trade_time;
@@ -76,7 +76,7 @@ impl SpotStream {
                         self.processed.obi_range.0 = ob_data.orderbook_imbalance_slack(self.processed.price, 0.005);
                         self.processed.obi_range.1 = ob_data.orderbook_imbalance_slack(self.processed.price, 0.01);
 
-                        let (bid_activity, ask_activity) = ob_data.near_price_bid_ask_activity(self.processed.price, 0.001);
+                        let (bid_activity, ask_activity) = ob_data.near_price_bid_ask_activity(self.processed.price, 0.002);
                         self.processed.near_price_bids = bid_activity;
                         self.processed.near_price_asks = ask_activity;
 

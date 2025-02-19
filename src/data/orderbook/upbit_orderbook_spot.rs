@@ -97,7 +97,7 @@ impl UpbitSpotOrderbookStreamHandler {
             tokio::select! {
                 _ = interval.tick() => {
                     if let Err(e) = write.send(Message::Ping(Bytes::from_static(&[]))).await {
-                        error!("Failed to send ping: {}", e);
+                        error!("Failed to send  ping: {}", e);
                         break;
                     }
                 }
@@ -116,6 +116,10 @@ impl UpbitSpotOrderbookStreamHandler {
                                         }
                                     } else {
                                         // Real time
+                                        let update = self.generate_orderbook_update(&orderbook);
+                                        if let Err(e) = self.tx.send(update).await {
+                                            error!("Failed to send orderbook update: {}", e);
+                                        }
                                     }
                                 }
                                 Err(e) => error!("Failed to parse binary orderbook data: {}", e),

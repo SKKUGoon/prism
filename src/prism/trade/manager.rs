@@ -2,6 +2,7 @@ use crate::prism::trade::{
     binance::BinanceFeatureProcessed, intra_exchange_param::IntraParams,
     upbit::UpbitFeatureProcessed, TradeConfig,
 };
+use log::info;
 use tokio::select;
 
 use super::strategy::snipe_large_order::SnipeLargeOrderStrategy;
@@ -38,11 +39,11 @@ impl TradeManager {
     pub async fn work(&mut self) {
         // Setup strategies
         let mut binance_futures_snipe_large_order =
-            SnipeLargeOrderStrategy::new("Binance Futures".to_string(), 5000.0);
+            SnipeLargeOrderStrategy::new("Binance Futures".to_string());
         let mut binance_spot_snipe_large_order =
-            SnipeLargeOrderStrategy::new("Binance Spot".to_string(), 5000.0);
+            SnipeLargeOrderStrategy::new("Binance Spot".to_string());
         let mut upbit_krw_spot_snipe_large_order =
-            SnipeLargeOrderStrategy::new("Upbit Spot".to_string(), 500.0);
+            SnipeLargeOrderStrategy::new("Upbit Spot".to_string());
 
         loop {
             select! {
@@ -62,7 +63,10 @@ impl TradeManager {
                     self.upbit_spot.update_params(&feature);
                     self.upbit_spot.update_bars(&feature);
 
-                    upbit_krw_spot_snipe_large_order.evaluate(&self.upbit_spot);
+                    let params = upbit_krw_spot_snipe_large_order.evaluate(&self.upbit_spot);
+                    if let Some(params) = params {
+                        info!("Upbit KRW Spot Snipe Large Order: {:?}", params);
+                    }
                 }
                 Some(feature) = self.upbit.btc.recv() => {
                     self.upbit_spot.update_params(&feature);

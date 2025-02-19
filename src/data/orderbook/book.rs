@@ -107,12 +107,6 @@ impl Orderbook {
         let mut asks_diff: HashMap<String, String> = HashMap::new();
 
         for (price, quantity) in update.bids.iter() {
-            if quantity == "0" {
-                self.bids.remove(price);
-            } else {
-                self.bids.insert(price.clone(), quantity.clone());
-            }
-
             let old_qty = self
                 .bids
                 .get(price)
@@ -123,15 +117,15 @@ impl Orderbook {
             let diff = new_qty - old_qty;
 
             bids_diff.insert(price.clone(), diff.to_string());
+
+            if quantity == "0" {
+                self.bids.remove(price);
+            } else {
+                self.bids.insert(price.clone(), quantity.clone());
+            }
         }
 
         for (price, quantity) in update.asks.iter() {
-            if quantity == "0" {
-                self.asks.remove(price);
-            } else {
-                self.asks.insert(price.clone(), quantity.clone());
-            }
-
             let old_qty = self
                 .asks
                 .get(price)
@@ -140,8 +134,13 @@ impl Orderbook {
                 .unwrap_or(0.0);
             let new_qty = quantity.parse::<f32>().unwrap_or(0.0);
             let diff = new_qty - old_qty;
-
             asks_diff.insert(price.clone(), diff.to_string());
+
+            if quantity == "0" {
+                self.asks.remove(price);
+            } else {
+                self.asks.insert(price.clone(), quantity.clone());
+            }
         }
 
         self.trade_time = update.trade_time;
@@ -329,17 +328,17 @@ impl OrderbookData {
         let mut ask_activity: HashMap<String, String> = HashMap::new();
 
         // Calculate bid activity within margin
-        for (price_str, quantity) in self.bids.iter() {
+        for (price_str, quantity) in self.bids_diff.iter() {
             let bid_price = price_str.parse::<f32>().unwrap_or(0.0);
-            if bid_price >= price - margin && bid_price < price {
+            if bid_price > price * (1f32 - margin) && bid_price < price {
                 bid_activity.insert(price_str.clone(), quantity.clone());
             }
         }
 
         // Calculate ask activity within margin
-        for (price_str, quantity) in self.asks.iter() {
+        for (price_str, quantity) in self.asks_diff.iter() {
             let ask_price = price_str.parse::<f32>().unwrap_or(0.0);
-            if ask_price > price && ask_price <= price + margin {
+            if ask_price > price * (1f32 - margin) && ask_price < price {
                 ask_activity.insert(price_str.clone(), quantity.clone());
             }
         }
