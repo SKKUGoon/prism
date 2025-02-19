@@ -1,18 +1,20 @@
-use crate::prism::trade::{
-    binance::BinanceFeatureProcessed, intra_exchange_param::IntraParams,
-    upbit::UpbitFeatureProcessed, TradeConfig,
+use super::{
+    input_channel::{BinanceFeatureProcessed, DatabaseRecord, UpbitFeatureProcessed},
+    strategy::snipe_large_order::SnipeLargeOrderStrategy,
 };
-use log::{error, info};
+use crate::prism::trade::{intra_exchange_param::IntraParams, TradeConfig};
 use tokio::select;
 
-use super::strategy::snipe_large_order::SnipeLargeOrderStrategy;
-
+#[allow(dead_code)]
 pub struct TradeManager {
     config: TradeConfig,
 
-    // Channels
+    // Channels (Input)
     binance: BinanceFeatureProcessed,
     upbit: UpbitFeatureProcessed,
+
+    // Strategy Channels (Output)
+    snipe_large_order: DatabaseRecord,
 
     // Parameters
     binance_futures: IntraParams,
@@ -24,12 +26,14 @@ impl TradeManager {
     pub fn new(
         binance_ch: BinanceFeatureProcessed,
         upbit_ch: UpbitFeatureProcessed,
+        snipe_large_order_ch: DatabaseRecord,
         config: TradeConfig,
     ) -> Self {
         Self {
             config,
             binance: binance_ch,
             upbit: upbit_ch,
+            snipe_large_order: snipe_large_order_ch,
             binance_futures: IntraParams::new(100),
             binance_spot: IntraParams::new(100),
             upbit_spot: IntraParams::new(100),
@@ -38,10 +42,6 @@ impl TradeManager {
 
     pub async fn work(&mut self) {
         // Setup strategies
-        // let mut binance_futures_snipe_large_order =
-        //     SnipeLargeOrderStrategy::new("Binance Futures".to_string());
-        // let mut binance_spot_snipe_large_order =
-        //     SnipeLargeOrderStrategy::new("Binance Spot".to_string());
         let mut upbit_krw_spot_snipe_large_order =
             SnipeLargeOrderStrategy::new("Upbit Spot".to_string());
 
@@ -65,7 +65,7 @@ impl TradeManager {
 
                     let params = upbit_krw_spot_snipe_large_order.evaluate(&self.upbit_spot);
                     if let Some(params) = params {
-                        info!("Upbit KRW Spot Snipe Large Order: {:?}", params);
+                        self.snipe_large_order.strat1.send(params).await.unwrap();
                     }
                 }
                 Some(feature) = self.upbit.btc.recv() => {
@@ -75,11 +75,6 @@ impl TradeManager {
                 Some(feature) = self.upbit.usdt.recv() => {
                     self.upbit_spot.update_params(&feature);
                     self.upbit_spot.update_bars(&feature);
-                }
-                else => {
-                    // All channels have been closed
-                    error!("All channels have been closed, stopping the trade manager");
-                    break;
                 }
             }
         }

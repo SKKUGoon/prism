@@ -1,16 +1,18 @@
-pub mod binance;
+pub mod input_channel;
 pub mod inter_exchange_param;
 pub mod intra_exchange_param;
 pub mod manager;
 pub mod strategy;
-pub mod upbit;
 
+#[allow(dead_code)] // TODO: Remove this after Trade Manager implements this
 #[derive(Debug, Clone, Copy)]
 pub enum LongShort {
     Long,
     Short,
 }
 
+#[allow(dead_code)]
+#[derive(Debug, Clone)]
 pub struct TradeConfig {
     leverage: u8,
     max_leverage: u8,
