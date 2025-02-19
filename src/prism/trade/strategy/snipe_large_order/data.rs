@@ -61,7 +61,7 @@ async fn batch_insert(
     let mut param_index = 1;
     for feature in features {
         placeholders.push(format!(
-            "(${}::FLOAT8, ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${})",
+            "(to_timestamp(${}::FLOAT8), ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${}, ${})",
             param_index,
             param_index + 1,
             param_index + 2,
