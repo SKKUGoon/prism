@@ -26,27 +26,27 @@ impl FutureStream {
     pub async fn work(&mut self) {
         loop {
             tokio::select! {
-                Some(fut_mkt_data) = self.rx_market.recv() => {
+                Some(mkt_data) = self.rx_market.recv() => {
                     // Update price
-                    self.processed.price = fut_mkt_data.price;
+                    self.processed.price = mkt_data.price;
 
                     // Update event type
                     self.processed.event_type = Some("AggTrade".to_string());
 
                     // Update maker/taker quantity
-                    match fut_mkt_data.buyer_market_maker {
-                        true => self.processed.maker_quantity += fut_mkt_data.quantity,
-                        false => self.processed.taker_quantity += fut_mkt_data.quantity,
+                    match mkt_data.buyer_market_maker {
+                        true => self.processed.maker_quantity += mkt_data.quantity,
+                        false => self.processed.taker_quantity += mkt_data.quantity,
                     }
 
                     // Update bars
-                    self.update_volume_imbalance_bar(&fut_mkt_data);
-                    self.update_tick_imbalance_bar(&fut_mkt_data);
-                    self.update_dollar_imbalance_bar(&fut_mkt_data);
+                    self.update_volume_imbalance_bar(&mkt_data);
+                    self.update_tick_imbalance_bar(&mkt_data);
+                    self.update_dollar_imbalance_bar(&mkt_data);
 
                     // Update feature time
-                    self.processed.trade_time = fut_mkt_data.trade_time;
-                    self.processed.event_time = fut_mkt_data.event_time;
+                    self.processed.trade_time = mkt_data.trade_time;
+                    self.processed.event_time = mkt_data.event_time;
                     self.processed.processed_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64;
 
                     if self.tx_feature.send(self.processed.clone()).await.is_err() {
@@ -59,24 +59,24 @@ impl FutureStream {
                 }
 
                 // Insert Orderbook Data
-                Some(mut fut_ob_data) = self.rx_orderbook.recv() => {
+                Some(mut ob_data) = self.rx_orderbook.recv() => {
                     if self.processed.price > 0.0 {
                         // Update event type
                         self.processed.event_type = Some("Orderbook".to_string());
 
                         // Update feature time
-                        self.processed.trade_time = fut_ob_data.trade_time;
-                        self.processed.event_time = fut_ob_data.event_time;
+                        self.processed.trade_time = ob_data.trade_time;
+                        self.processed.event_time = ob_data.event_time;
                         self.processed.processed_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64;
 
-                        self.processed.obi = fut_ob_data.orderbook_imbalance();
-                        fut_ob_data.update_best_bid_ask(); // Update after calculating flow imbalance
-                        self.processed.ob_spread = fut_ob_data.best_ask.0.parse::<f32>().unwrap_or(0.0) - fut_ob_data.best_bid.0.parse::<f32>().unwrap_or(0.0);
+                        self.processed.obi = ob_data.orderbook_imbalance();
+                        ob_data.update_best_bid_ask(); // Update after calculating flow imbalance
+                        self.processed.ob_spread = ob_data.best_ask.0.parse::<f32>().unwrap_or(0.0) - ob_data.best_bid.0.parse::<f32>().unwrap_or(0.0);
 
-                        self.processed.obi_range.0 = fut_ob_data.orderbook_imbalance_slack(self.processed.price, 0.005);
-                        self.processed.obi_range.1 = fut_ob_data.orderbook_imbalance_slack(self.processed.price, 0.01);
+                        self.processed.obi_range.0 = ob_data.orderbook_imbalance_slack(self.processed.price, 0.005);
+                        self.processed.obi_range.1 = ob_data.orderbook_imbalance_slack(self.processed.price, 0.01);
 
-                        let (bid_activity, ask_activity) = fut_ob_data.near_price_bid_ask_activity(self.processed.price, 0.001);
+                        let (bid_activity, ask_activity) = ob_data.near_price_bid_ask_activity(self.processed.price, 0.001);
                         self.processed.near_price_bids = bid_activity;
                         self.processed.near_price_asks = ask_activity;
 
@@ -87,14 +87,14 @@ impl FutureStream {
                 }
 
                 // Insert Mark Price Data
-                Some(fut_markprice_data) = self.additional_rx.rx_markprice.recv() => {
+                Some(mprc_data) = self.additional_rx.rx_markprice.recv() => {
                     self.processed.event_type = Some("Mark Price".to_string());
-                    self.processed.event_time = fut_markprice_data.event_time;
+                    self.processed.event_time = mprc_data.event_time;
                     self.processed.processed_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64;
 
-                    self.processed.mark_price = fut_markprice_data.mark_price;
-                    self.processed.funding_rate = fut_markprice_data.funding_rate;
-                    self.processed.next_funding_time = fut_markprice_data.next_funding_time;
+                    self.processed.mark_price = mprc_data.mark_price;
+                    self.processed.funding_rate = mprc_data.funding_rate;
+                    self.processed.next_funding_time = mprc_data.next_funding_time;
 
                     if self.tx_feature.send(self.processed.clone()).await.is_err() {
                         error!("Failed to send feature to executor");
@@ -106,14 +106,14 @@ impl FutureStream {
                 }
 
                 // Insert Liquidation Data
-                Some(fut_liquidation_data) = self.additional_rx.rx_liquidation.recv() => {
+                Some(liq_data) = self.additional_rx.rx_liquidation.recv() => {
                     // Update price
                     self.processed.event_type = Some("Liquidation".to_string());
-                    self.processed.event_time = fut_liquidation_data.event_time;
+                    self.processed.event_time = liq_data.event_time;
                     self.processed.processed_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64;
 
-                    self.processed.liquidation_side = fut_liquidation_data.side;
-                    self.processed.liquidation_dvolume = fut_liquidation_data.quantity * fut_liquidation_data.avg_price;
+                    self.processed.liquidation_side = liq_data.side;
+                    self.processed.liquidation_dvolume = liq_data.quantity * liq_data.avg_price;
 
                     if self.tx_feature.send(self.processed.clone()).await.is_err() {
                         error!("Failed to send feature to executor");
