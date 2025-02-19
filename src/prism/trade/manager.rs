@@ -38,10 +38,10 @@ impl TradeManager {
 
     pub async fn work(&mut self) {
         // Setup strategies
-        let mut binance_futures_snipe_large_order =
-            SnipeLargeOrderStrategy::new("Binance Futures".to_string());
-        let mut binance_spot_snipe_large_order =
-            SnipeLargeOrderStrategy::new("Binance Spot".to_string());
+        // let mut binance_futures_snipe_large_order =
+        //     SnipeLargeOrderStrategy::new("Binance Futures".to_string());
+        // let mut binance_spot_snipe_large_order =
+        //     SnipeLargeOrderStrategy::new("Binance Spot".to_string());
         let mut upbit_krw_spot_snipe_large_order =
             SnipeLargeOrderStrategy::new("Upbit Spot".to_string());
 
@@ -51,13 +51,13 @@ impl TradeManager {
                     self.binance_futures.update_params(&feature);
                     self.binance_futures.update_bars(&feature);
 
-                    binance_futures_snipe_large_order.evaluate(&self.binance_futures);
+                    // binance_futures_snipe_large_order.evaluate(&self.binance_futures);
                 }
                 Some(feature) = self.binance.spot.recv() => {
                     self.binance_spot.update_params(&feature);
                     self.binance_spot.update_bars(&feature);
 
-                    binance_spot_snipe_large_order.evaluate(&self.binance_spot);
+                    // binance_spot_snipe_large_order.evaluate(&self.binance_spot);
                 }
                 Some(feature) = self.upbit.krw.recv() => {
                     self.upbit_spot.update_params(&feature);

@@ -36,26 +36,42 @@ impl BinanceStreams {
         tasks.spawn(async move { binance_fbook.listen().await });
         tasks.spawn(async move { binance_sbook.listen().await });
 
-        // Start Streams
-        tasks.spawn(spawn_future_aggtrade_task(
-            BinanceFutureAggTradeStreamHandler::new(future_symbol.clone(), self.future.agg_out),
-        ));
-        tasks.spawn(spawn_future_orderbook_task(
-            BinanceFutureOrderbookStreamHandler::new(future_symbol.clone(), self.future.ob_raw_out),
-        ));
-        tasks.spawn(spawn_future_liquidation_task(
-            BinanceFutureLiquidationStreamHandler::new(future_symbol.clone(), self.future.liq_out),
-        ));
-        tasks.spawn(spawn_future_markprice_task(
-            BinanceFutureMarkPriceStreamHandler::new(future_symbol.clone(), self.future.mark_out),
-        ));
+        if future_symbol != "NO_SYMBOL" {
+            // User didn't specify a future symbol on purpose
+            // Start Streams
+            tasks.spawn(spawn_future_aggtrade_task(
+                BinanceFutureAggTradeStreamHandler::new(future_symbol.clone(), self.future.agg_out),
+            ));
+            tasks.spawn(spawn_future_orderbook_task(
+                BinanceFutureOrderbookStreamHandler::new(
+                    future_symbol.clone(),
+                    self.future.ob_raw_out,
+                ),
+            ));
+            tasks.spawn(spawn_future_liquidation_task(
+                BinanceFutureLiquidationStreamHandler::new(
+                    future_symbol.clone(),
+                    self.future.liq_out,
+                ),
+            ));
+            tasks.spawn(spawn_future_markprice_task(
+                BinanceFutureMarkPriceStreamHandler::new(
+                    future_symbol.clone(),
+                    self.future.mark_out,
+                ),
+            ));
+        }
 
-        tasks.spawn(spawn_spot_aggtrade_task(
-            BinanceSpotAggTradeStreamHandler::new(spot_symbol.clone(), self.spot.agg_out),
-        ));
-        tasks.spawn(spawn_spot_orderbook_task(
-            BinanceSpotOrderbookStreamHandler::new(spot_symbol.clone(), self.spot.ob_raw_out),
-        ));
+        if spot_symbol != "NO_SYMBOL" {
+            // User didn't specify a spot symbol on purpose
+            // Start Streams
+            tasks.spawn(spawn_spot_aggtrade_task(
+                BinanceSpotAggTradeStreamHandler::new(spot_symbol.clone(), self.spot.agg_out),
+            ));
+            tasks.spawn(spawn_spot_orderbook_task(
+                BinanceSpotOrderbookStreamHandler::new(spot_symbol.clone(), self.spot.ob_raw_out),
+            ));
+        }
     }
 }
 

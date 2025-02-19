@@ -1,21 +1,45 @@
 services:
-  prism-xrp:
+  prism-krw-scam-coin-1:
     build:
       context: .
       dockerfile: Dockerfile
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:
-      - RUST_LOG=debug
+      - RUST_LOG=info
       # Symbols
-      - SYMBOLS_BINANCE_FUT=xrpusdt
-      - SYMBOLS_BINANCE_SPT=xrpusdt
-      - SYMBOLS_UPBIT_KRW=KRW-XRP
-      - SYMBOLS_UPBIT_BTC=BTC-XRP
-      - SYMBOLS_UPBIT_USDT=USDT-XRP
+      # Use NO_SYMBOL if you don't want to start streams for that exchange
+      - SYMBOLS_BINANCE_FUT=NO_SYMBOL  
+      - SYMBOLS_BINANCE_SPT=NO_SYMBOL
+      - SYMBOLS_UPBIT_KRW=KRW-LAYER
+      - SYMBOLS_UPBIT_BTC=NO_SYMBOL
+      - SYMBOLS_UPBIT_USDT=NO_SYMBOL
       # Database
-      - TABLE_FUT=features_xrpusdt_future3
-      - TABLE_SPT=features_xrpusdt_spot3
+      - TABLE_FUT=unspecified
+      - TABLE_SPT=unspecified
+      # Other
+      - CHANNEL_CAPACITY=999
+      - DATA_DUMP=false
+    restart: unless-stopped
+
+  prism-krw-scam-coin-2:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      - RUST_LOG=info
+      # Symbols
+      # Use NO_SYMBOL if you don't want to start streams for that exchange
+      - SYMBOLS_BINANCE_FUT=NO_SYMBOL  
+      - SYMBOLS_BINANCE_SPT=NO_SYMBOL
+      - SYMBOLS_UPBIT_KRW=KRW-GLM
+      - SYMBOLS_UPBIT_BTC=NO_SYMBOL
+      - SYMBOLS_UPBIT_USDT=NO_SYMBOL
+      # Database
+      - TABLE_FUT=unspecified
+      - TABLE_SPT=unspecified
       # Other
       - CHANNEL_CAPACITY=999
       - DATA_DUMP=false

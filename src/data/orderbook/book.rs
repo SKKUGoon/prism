@@ -328,9 +328,36 @@ impl OrderbookData {
         let mut ask_activity: HashMap<String, String> = HashMap::new();
 
         // Calculate bid activity within margin
+        for (price_str, quantity) in self.bids.iter() {
+            let bid_price = price_str.parse::<f32>().unwrap_or(0.0);
+            if bid_price < price && bid_price > price * (1f32 - margin) {
+                bid_activity.insert(price_str.clone(), quantity.clone());
+            }
+        }
+
+        // Calculate ask activity within margin
+        for (price_str, quantity) in self.asks.iter() {
+            let ask_price = price_str.parse::<f32>().unwrap_or(0.0);
+            if ask_price > price && ask_price < price * (1f32 + margin) {
+                ask_activity.insert(price_str.clone(), quantity.clone());
+            }
+        }
+
+        (bid_activity, ask_activity)
+    }
+
+    pub fn near_price_bid_ask_diff_activity(
+        &mut self,
+        price: f32,
+        margin: f32,
+    ) -> (HashMap<String, String>, HashMap<String, String>) {
+        let mut bid_activity: HashMap<String, String> = HashMap::new();
+        let mut ask_activity: HashMap<String, String> = HashMap::new();
+
+        // Calculate bid activity within margin
         for (price_str, quantity) in self.bids_diff.iter() {
             let bid_price = price_str.parse::<f32>().unwrap_or(0.0);
-            if bid_price > price * (1f32 - margin) && bid_price < price {
+            if bid_price < price && bid_price > price * (1f32 - margin) {
                 bid_activity.insert(price_str.clone(), quantity.clone());
             }
         }
@@ -338,7 +365,7 @@ impl OrderbookData {
         // Calculate ask activity within margin
         for (price_str, quantity) in self.asks_diff.iter() {
             let ask_price = price_str.parse::<f32>().unwrap_or(0.0);
-            if ask_price > price * (1f32 - margin) && ask_price < price {
+            if ask_price > price && ask_price < price * (1f32 + margin) {
                 ask_activity.insert(price_str.clone(), quantity.clone());
             }
         }

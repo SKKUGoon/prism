@@ -38,3 +38,5 @@ impl TradeConfig {
 
 // Trading fees are different for each exchange
 // trade_fees: 0.0004, // 0.04% for market takers
+// Retrieve Trading Configuration from Upbit and Binance
+// Floating point limit, Max leverage etc.

@@ -1,10 +1,11 @@
 # Algorithmic Sniping of Large Orders
 
 🔹 Opportunity:
-	•	Upbit does not allow shorting, meaning large market buy orders cause rapid price jumps.
-	•	Retail traders place big orders without breaking them into smaller parts.
-	•	This creates sudden price spikes that bots can exploit instantly.
-
+	•	Why Upbit?
+		•	Upbit does not allow shorting, meaning large market buy orders cause rapid price jumps.
+		•	Retail traders place big orders without breaking them into smaller parts.
+		•	This creates sudden price spikes that bots can exploit instantly.
+		•	Because of KYC, most of the users of the upbit exchange are retail Koreans.
 
 🔹 Strategy:
 	1.	Monitor the Upbit order book for unusually large orders.

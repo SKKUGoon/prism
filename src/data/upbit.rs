@@ -20,13 +20,16 @@ impl UpbitStreams {
         let mut upbit_sbook = Orderbook::new(self.spot.ob_raw_in, self.spot.ob_mng_out);
         tasks.spawn(async move { upbit_sbook.listen().await });
 
-        // Start Streams
-        tasks.spawn(spawn_spot_aggtrade_task(
-            UpbitSpotAggTradeStreamHandler::new(symbols.clone(), self.spot.agg_out),
-        ));
-        tasks.spawn(spawn_spot_orderbook_task(
-            UpbitSpotOrderbookStreamHandler::new(symbols.clone(), self.spot.ob_raw_out),
-        ));
+        if symbols != "NO_SYMBOL" {
+            // User didn't specify a symbol on purpose
+            // Start Streams
+            tasks.spawn(spawn_spot_aggtrade_task(
+                UpbitSpotAggTradeStreamHandler::new(symbols.clone(), self.spot.agg_out),
+            ));
+            tasks.spawn(spawn_spot_orderbook_task(
+                UpbitSpotOrderbookStreamHandler::new(symbols.clone(), self.spot.ob_raw_out),
+            ));
+        }
     }
 }
 
