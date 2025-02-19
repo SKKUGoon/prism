@@ -15,11 +15,10 @@ services:
       - SYMBOLS_UPBIT_BTC=NO_SYMBOL
       - SYMBOLS_UPBIT_USDT=NO_SYMBOL
       # Database
-      - TABLE_FUT=unspecified
-      - TABLE_SPT=unspecified
+      - STRATEGY1_TABLE=crypto.strategy1_layer
       # Other
       - CHANNEL_CAPACITY=999
-      - DATA_DUMP=false
+      - DATA_DUMP=true
     restart: unless-stopped
 
   prism-krw-scam-coin-2:
@@ -38,11 +37,10 @@ services:
       - SYMBOLS_UPBIT_BTC=NO_SYMBOL
       - SYMBOLS_UPBIT_USDT=NO_SYMBOL
       # Database
-      - TABLE_FUT=unspecified
-      - TABLE_SPT=unspecified
+      - STRATEGY1_TABLE=crypto.strategy1_glm
       # Other
       - CHANNEL_CAPACITY=999
-      - DATA_DUMP=false
+      - DATA_DUMP=true
     restart: unless-stopped
 
   # prism-doge:
