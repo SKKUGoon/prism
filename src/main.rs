@@ -5,12 +5,16 @@ use crate::data::{
 };
 use channel::{FutureChannel, SpotChannel, SystemChannelPairs};
 use config::read_env_config;
-use database::postgres::timescale_batch_writer;
+use database::postgres::connect_to_timescale;
 use log::{error, info, warn};
 use prism::{
     stream::{future::FutureStream, spot::SpotStream, FutureReceivers},
     trade::{
-        binance::BinanceFeatureProcessed, manager::TradeManager, upbit::UpbitFeatureProcessed,
+        input_channel::{BinanceFeatureProcessed, DatabaseRecord, UpbitFeatureProcessed},
+        manager::TradeManager,
+        strategy::snipe_large_order::data::{
+            record_snipe_large_order_params, SnipeLargeOrderChannelPairs,
+        },
         TradeConfig,
     },
 };
@@ -43,16 +47,22 @@ async fn main() {
     let mut tasks = tokio::task::JoinSet::new();
 
     /* Create channels for thread communication */
+    // Binance information to Feature Processor
     let binance_fut = FutureChannel::new(env_var.channel_capacity);
     let binance_spt = SpotChannel::new(env_var.channel_capacity);
 
+    // Upbit information to Feature Processor
     let upbit_spt_krw = SpotChannel::new(env_var.channel_capacity);
 
+    // Processed Feature to Trade Manager
     let binance_sys_fut = SystemChannelPairs::new(env_var.channel_capacity);
     let binance_sys_spt = SystemChannelPairs::new(env_var.channel_capacity);
     let upbit_krw_sys_spt = SystemChannelPairs::new(env_var.channel_capacity);
     let upbit_btc_sys_spt = SystemChannelPairs::new(env_var.channel_capacity);
     let upbit_usdt_sys_spt = SystemChannelPairs::new(env_var.channel_capacity);
+
+    // Strategy Parameter Channel
+    let strat1 = SnipeLargeOrderChannelPairs::new(env_var.channel_capacity);
 
     /* Start stream managers */
     let mut binance_future_manager = FutureStream::new(
@@ -73,7 +83,7 @@ async fn main() {
         upbit_spt_krw.ob.mng.1,
         upbit_spt_krw.agg.1,
         upbit_krw_sys_spt.exec.0.clone(),
-    );
+    ); // If needed add `btc` and `usdt` streams
 
     /* Start Data Manager */
     let mut core_config = TradeConfig::default();
@@ -85,8 +95,11 @@ async fn main() {
         },
         UpbitFeatureProcessed {
             krw: upbit_krw_sys_spt.exec.1,
-            btc: upbit_btc_sys_spt.exec.1,
+            btc: upbit_btc_sys_spt.exec.1, // If needed add `btc` and `usdt` streams
             usdt: upbit_usdt_sys_spt.exec.1,
+        },
+        DatabaseRecord {
+            strat1: strat1.db.0,
         },
         core_config,
     );
@@ -99,19 +112,10 @@ async fn main() {
 
     /* Timescale Insertion */
     if env_var.data_dump {
+        let client = connect_to_timescale().await.unwrap();
         tasks.spawn(async move {
             if let Err(e) =
-                timescale_batch_writer("binance", &env_var.table_fut.clone(), binance_sys_fut.db.1)
-                    .await
-            {
-                error!("Timescale batch writer error: {}", e);
-            }
-        });
-
-        tasks.spawn(async move {
-            if let Err(e) =
-                timescale_batch_writer("binance", &env_var.table_spt.clone(), binance_sys_spt.db.1)
-                    .await
+                record_snipe_large_order_params(&client, &env_var.table_strat1, strat1.db.1).await
             {
                 error!("Timescale batch writer error: {}", e);
             }
