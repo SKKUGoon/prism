@@ -32,10 +32,6 @@ pub struct SystemChannelPairs {
         mpsc::Sender<FeatureProcessed>,
         mpsc::Receiver<FeatureProcessed>,
     ),
-    pub db: (
-        mpsc::Sender<FeatureProcessed>,
-        mpsc::Receiver<FeatureProcessed>,
-    ),
 }
 
 pub struct Spot;
@@ -94,11 +90,9 @@ impl FutureChannel {
 impl SystemChannelPairs {
     pub fn new(max_capacity: usize) -> Self {
         let (tx_exec, rx_exec) = mpsc::channel(max_capacity);
-        let (tx_db, rx_db) = mpsc::channel(max_capacity);
 
         Self {
             exec: (tx_exec, rx_exec),
-            db: (tx_db, rx_db),
         }
     }
 }
