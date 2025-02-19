@@ -4,7 +4,7 @@ use crate::data::{
     orderbook::{book::Orderbook, upbit_orderbook_spot::UpbitSpotOrderbookStreamHandler},
     stream::StreamHandler,
 };
-use log::{error, warn};
+use log::{error, info, warn};
 use tokio::task::JoinSet;
 
 pub struct UpbitStreams {
@@ -17,19 +17,22 @@ impl UpbitStreams {
     }
 
     pub fn spawn_streams(self, tasks: &mut JoinSet<()>, symbols: String) {
+        if symbols == "NO_SYMBOL" {
+            warn!("No symbols specified, skipping Upbit streams");
+            return;
+        }
+
         let mut upbit_sbook = Orderbook::new(self.spot.ob_raw_in, self.spot.ob_mng_out);
         tasks.spawn(async move { upbit_sbook.listen().await });
 
-        if symbols != "NO_SYMBOL" {
-            // User didn't specify a symbol on purpose
-            // Start Streams
-            tasks.spawn(spawn_spot_aggtrade_task(
-                UpbitSpotAggTradeStreamHandler::new(symbols.clone(), self.spot.agg_out),
-            ));
-            tasks.spawn(spawn_spot_orderbook_task(
-                UpbitSpotOrderbookStreamHandler::new(symbols.clone(), self.spot.ob_raw_out),
-            ));
-        }
+        // Spot Streams
+        info!("Starting Upbit Streams for {}", symbols);
+        tasks.spawn(spawn_spot_aggtrade_task(
+            UpbitSpotAggTradeStreamHandler::new(symbols.clone(), self.spot.agg_out),
+        ));
+        tasks.spawn(spawn_spot_orderbook_task(
+            UpbitSpotOrderbookStreamHandler::new(symbols.clone(), self.spot.ob_raw_out),
+        ));
     }
 }
 
