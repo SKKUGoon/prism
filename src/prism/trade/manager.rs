@@ -2,7 +2,7 @@ use crate::prism::trade::{
     binance::BinanceFeatureProcessed, intra_exchange_param::IntraParams,
     upbit::UpbitFeatureProcessed, TradeConfig,
 };
-use log::info;
+use log::{error, info};
 use tokio::select;
 
 use super::strategy::snipe_large_order::SnipeLargeOrderStrategy;
@@ -75,6 +75,11 @@ impl TradeManager {
                 Some(feature) = self.upbit.usdt.recv() => {
                     self.upbit_spot.update_params(&feature);
                     self.upbit_spot.update_bars(&feature);
+                }
+                else => {
+                    // All channels have been closed
+                    error!("All channels have been closed, stopping the trade manager");
+                    break;
                 }
             }
         }
