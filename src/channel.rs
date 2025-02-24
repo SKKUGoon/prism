@@ -2,7 +2,7 @@ use crate::data::{
     liquidation::LiquidationData,
     market::MarketData,
     markprice::MarkPriceData,
-    orderbook::book::{OrderbookData, OrderbookUpdateStream},
+    orderbook::{OrderbookData, OrderbookUpdateStream},
 };
 use crate::prism::stream::FeatureProcessed;
 use tokio::sync::mpsc;

@@ -1,4 +1,4 @@
-use crate::data::{market::MarketData, orderbook::book::OrderbookData};
+use crate::data::{market::MarketData, orderbook::OrderbookData};
 use crate::prism::stream::{FeatureInProgress, FeatureProcessed, FutureReceivers, StreamBase};
 use log::error;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -40,9 +40,9 @@ impl FutureStream {
                     }
 
                     // Update bars
-                    self.update_volume_imbalance_bar(&mkt_data);
-                    self.update_tick_imbalance_bar(&mkt_data);
-                    self.update_dollar_imbalance_bar(&mkt_data);
+                    // self.update_volume_imbalance_bar(&mkt_data);
+                    // self.update_tick_imbalance_bar(&mkt_data);
+                    // self.update_dollar_imbalance_bar(&mkt_data);
 
                     // Update feature time
                     self.processed.trade_time = mkt_data.trade_time;

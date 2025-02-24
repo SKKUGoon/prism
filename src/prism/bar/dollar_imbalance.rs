@@ -40,7 +40,6 @@ impl DollarImbalanceBar {
 
         // Update VWAP
         self.bar.update_vwap(mkt_data);
-
         // Update CVD - Only for Dollar Imbalance and Volume Imbalance
         self.calculate_cvd(mkt_data, prev_price);
 

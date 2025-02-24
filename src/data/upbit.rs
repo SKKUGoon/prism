@@ -1,7 +1,7 @@
 use crate::data::{
     exchanges::SpotDataChannels,
     market::upbit_aggtrade_spot::UpbitSpotAggTradeStreamHandler,
-    orderbook::{book::Orderbook, upbit_orderbook_spot::UpbitSpotOrderbookStreamHandler},
+    orderbook::{upbit_orderbook_spot::UpbitSpotOrderbookStreamHandler, Orderbook},
     stream::StreamHandler,
 };
 use log::{error, info, warn};

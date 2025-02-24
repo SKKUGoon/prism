@@ -8,7 +8,7 @@ use crate::data::{
     markprice::binance_markprice_future::BinanceFutureMarkPriceStreamHandler,
     orderbook::{
         binance_orderbook_future::BinanceFutureOrderbookStreamHandler,
-        binance_orderbook_spot::BinanceSpotOrderbookStreamHandler, book::Orderbook,
+        binance_orderbook_spot::BinanceSpotOrderbookStreamHandler, Orderbook,
     },
     stream::StreamHandler,
 };

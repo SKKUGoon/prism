@@ -1,4 +1,4 @@
-use crate::prism::{bar::manager::BarManager, stream::FeatureProcessed};
+use crate::prism::stream::FeatureProcessed;
 use std::collections::HashMap;
 
 pub struct IntraParams {
@@ -21,7 +21,7 @@ pub struct IntraParams {
     pub dollar_imbalance: Option<f32>,
     pub dollar_imbalance_thres: Option<f32>,
     // 5. Bar History Manager
-    pub bars: BarManager,
+    // pub bars: BarManager,
     // 6. Orderbook
     pub bid_diff: HashMap<String, String>,
     pub ask_diff: HashMap<String, String>,
@@ -44,19 +44,19 @@ impl IntraParams {
             dollar_cvd: None,
             dollar_imbalance: None,
             dollar_imbalance_thres: None,
-            bars: BarManager::new(historical_bars),
+            // bars: BarManager::new(historical_bars),
             bid_diff: HashMap::new(),
             ask_diff: HashMap::new(),
         }
     }
 
     pub fn update_bars(&mut self, data: &FeatureProcessed) {
-        self.bars
-            .update_tick_imbalance_bar(&data.tick_imbalance_bar);
-        self.bars
-            .update_volume_imbalance_bar(&data.volume_imbalance_bar);
-        self.bars
-            .update_dollar_imbalance_bar(&data.dollar_imbalance_bar);
+        // self.bars
+        //     .update_tick_imbalance_bar(&data.tick_imbalance_bar);
+        // self.bars
+        //     .update_volume_imbalance_bar(&data.volume_imbalance_bar);
+        // self.bars
+        //     .update_dollar_imbalance_bar(&data.dollar_imbalance_bar);
     }
 
     pub fn update_params(&mut self, data: &FeatureProcessed) {
@@ -69,12 +69,12 @@ impl IntraParams {
         self.tick_imbalance_thres = Some(data.tick_imbalance_thres);
 
         self.volume_vwap = Some(data.volume_imbalance_vwap);
-        self.volume_cvd = Some(data.volume_imbalance_bar.cvd);
+        // self.volume_cvd = Some(data.volume_imbalance_bar.cvd);
         self.volume_imbalance = Some(data.volume_imbalance);
         self.volume_imbalance_thres = Some(data.volume_imbalance_thres);
 
         self.dollar_vwap = Some(data.dollar_imbalance_vwap);
-        self.dollar_cvd = Some(data.dollar_imbalance_bar.cvd);
+        // self.dollar_cvd = Some(data.dollar_imbalance_bar.cvd);
         self.dollar_imbalance = Some(data.dollar_imbalance);
         self.dollar_imbalance_thres = Some(data.dollar_imbalance_thres);
 
