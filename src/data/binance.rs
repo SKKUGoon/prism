@@ -1,4 +1,8 @@
 use crate::data::{
+    depth::{
+        binance::future::BinanceFutureOrderbookStreamHandler,
+        binance::spot::BinanceSpotOrderbookStreamHandler,
+    },
     exchanges::{FutureDataChannels, SpotDataChannels},
     liquidation::binance::future::BinanceFutureLiquidationStreamHandler,
     market::{
@@ -6,10 +10,6 @@ use crate::data::{
         binance::spot::BinanceSpotAggTradeStreamHandler,
     },
     markprice::binance::future::BinanceFutureMarkPriceStreamHandler,
-    orderbook::{
-        binance::future::BinanceFutureOrderbookStreamHandler,
-        binance::spot::BinanceSpotOrderbookStreamHandler, Orderbook,
-    },
     stream::StreamHandler,
 };
 use log::{error, warn};
@@ -35,11 +35,6 @@ impl BinanceStreams {
             warn!("No symbols specified, skipping Binance streams");
             return;
         }
-
-        let mut binance_fbook = Orderbook::new(self.future.ob_raw_in, self.future.ob_mng_out);
-        let mut binance_sbook = Orderbook::new(self.spot.ob_raw_in, self.spot.ob_mng_out);
-        tasks.spawn(async move { binance_fbook.listen().await });
-        tasks.spawn(async move { binance_sbook.listen().await });
 
         // Future Streams
         tasks.spawn(spawn_future_aggtrade_task(

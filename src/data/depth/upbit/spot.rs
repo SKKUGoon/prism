@@ -1,4 +1,4 @@
-use crate::data::{orderbook::OrderbookUpdateStream, stream::StreamHandler};
+use crate::data::{depth::OrderbookUpdateStream, stream::StreamHandler};
 use futures::{SinkExt, StreamExt};
 use log::{error, info};
 use serde::Deserialize;

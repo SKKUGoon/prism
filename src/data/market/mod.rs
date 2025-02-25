@@ -1,8 +1,8 @@
 pub mod binance;
 pub mod upbit;
 
+// Output data format
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 pub struct MarketData {
     pub price: f32,
     pub quantity: f32,

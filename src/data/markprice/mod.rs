@@ -1,6 +1,6 @@
 pub mod binance;
 
-#[allow(dead_code)]
+// Output data format
 #[derive(Debug)]
 pub struct MarkPriceData {
     pub mark_price: f32,

@@ -1,8 +1,6 @@
 use crate::data::{
-    exchanges::SpotDataChannels,
-    market::upbit::spot::UpbitSpotAggTradeStreamHandler,
-    orderbook::{upbit::spot::UpbitSpotOrderbookStreamHandler, Orderbook},
-    stream::StreamHandler,
+    depth::upbit::spot::UpbitSpotOrderbookStreamHandler, exchanges::SpotDataChannels,
+    market::upbit::spot::UpbitSpotAggTradeStreamHandler, stream::StreamHandler,
 };
 use log::{error, info, warn};
 use tokio::task::JoinSet;
@@ -21,9 +19,6 @@ impl UpbitStreams {
             warn!("No symbols specified, skipping Upbit streams");
             return;
         }
-
-        let mut upbit_sbook = Orderbook::new(self.spot.ob_raw_in, self.spot.ob_mng_out);
-        tasks.spawn(async move { upbit_sbook.listen().await });
 
         // Spot Streams
         info!("Starting Upbit Streams for {}", symbols);
