@@ -1,4 +1,4 @@
-pub mod binance_markprice_future;
+pub mod binance;
 
 #[allow(dead_code)]
 #[derive(Debug)]

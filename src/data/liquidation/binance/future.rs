@@ -1,4 +1,5 @@
-use crate::data::{liquidation::LiquidationData, stream::StreamHandler};
+use crate::data::liquidation::LiquidationData;
+use crate::data::stream::StreamHandler;
 use futures::{SinkExt, StreamExt};
 use log::{error, info};
 use serde::Deserialize;

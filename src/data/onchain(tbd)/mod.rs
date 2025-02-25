@@ -1,3 +1,5 @@
+// Collect Well-Known Wallet Addresses
+
 #[allow(dead_code)]
 const BINANCE_US_1: &str = "rEeEWeP88cpKUddKk37B2EZeiHBGiBXY3";
 #[allow(dead_code)]

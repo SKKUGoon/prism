@@ -1,7 +1,6 @@
-pub mod binance_orderbook_future;
-pub mod binance_orderbook_spot;
-pub mod bitget_orderbook_future;
-pub mod upbit_orderbook_spot;
+pub mod binance;
+pub mod bitget;
+pub mod upbit;
 
 use std::collections::HashMap;
 use tokio::sync::mpsc::{Receiver, Sender};

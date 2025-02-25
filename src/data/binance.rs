@@ -1,14 +1,14 @@
 use crate::data::{
     exchanges::{FutureDataChannels, SpotDataChannels},
-    liquidation::binance_liquidation_future::BinanceFutureLiquidationStreamHandler,
+    liquidation::binance::future::BinanceFutureLiquidationStreamHandler,
     market::{
-        binance_aggtrade_future::BinanceFutureAggTradeStreamHandler,
-        binance_aggtrade_spot::BinanceSpotAggTradeStreamHandler,
+        binance::future::BinanceFutureAggTradeStreamHandler,
+        binance::spot::BinanceSpotAggTradeStreamHandler,
     },
-    markprice::binance_markprice_future::BinanceFutureMarkPriceStreamHandler,
+    markprice::binance::future::BinanceFutureMarkPriceStreamHandler,
     orderbook::{
-        binance_orderbook_future::BinanceFutureOrderbookStreamHandler,
-        binance_orderbook_spot::BinanceSpotOrderbookStreamHandler, Orderbook,
+        binance::future::BinanceFutureOrderbookStreamHandler,
+        binance::spot::BinanceSpotOrderbookStreamHandler, Orderbook,
     },
     stream::StreamHandler,
 };
