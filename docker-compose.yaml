@@ -1,27 +1,5 @@
 services:
-  prism-krw-scam-coin-1:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    environment:
-      - RUST_LOG=info
-      # Symbols
-      # Use NO_SYMBOL if you don't want to start streams for that exchange
-      - SYMBOLS_BINANCE_FUT=NO_SYMBOL  
-      - SYMBOLS_BINANCE_SPT=NO_SYMBOL
-      - SYMBOLS_UPBIT_KRW=KRW-LAYER
-      - SYMBOLS_UPBIT_BTC=NO_SYMBOL
-      - SYMBOLS_UPBIT_USDT=NO_SYMBOL
-      # Database
-      - STRATEGY1_TABLE=crypto.strategy1_layer
-      # Other
-      - CHANNEL_CAPACITY=999
-      - DATA_DUMP=true
-    restart: unless-stopped
-
-  prism-krw-scam-coin-2:
+  prism-krw-coin-1:
     build:
       context: .
       dockerfile: Dockerfile
@@ -39,7 +17,29 @@ services:
       # Database
       - STRATEGY1_TABLE=crypto.strategy1_glm
       # Other
-      - CHANNEL_CAPACITY=999
+      - CHANNEL_CAPACITY=256
+      - DATA_DUMP=true
+    restart: unless-stopped
+
+  prism-krw-coin-2:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      - RUST_LOG=debug
+      # Symbols
+      # Use NO_SYMBOL if you don't want to start streams for that exchange
+      - SYMBOLS_BINANCE_FUT=NO_SYMBOL  
+      - SYMBOLS_BINANCE_SPT=NO_SYMBOL
+      - SYMBOLS_UPBIT_KRW=KRW-BTC
+      - SYMBOLS_UPBIT_BTC=NO_SYMBOL
+      - SYMBOLS_UPBIT_USDT=NO_SYMBOL
+      # Database
+      - STRATEGY1_TABLE=crypto.strategy1_btc
+      # Other
+      - CHANNEL_CAPACITY=256
       - DATA_DUMP=true
     restart: unless-stopped
 
