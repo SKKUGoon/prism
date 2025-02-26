@@ -5,11 +5,11 @@ use crate::data::{
 use log::{error, info, warn};
 use tokio::task::JoinSet;
 
-pub struct UpbitStreams {
+pub struct UpbitThreads {
     spot: SpotDataChannels,
 }
 
-impl UpbitStreams {
+impl UpbitThreads {
     pub fn new(spot: SpotDataChannels) -> Self {
         Self { spot }
     }
@@ -26,7 +26,7 @@ impl UpbitStreams {
             UpbitSpotAggTradeStreamHandler::new(symbols.clone(), self.spot.agg_out),
         ));
         tasks.spawn(spawn_spot_orderbook_task(
-            UpbitSpotOrderbookStreamHandler::new(symbols.clone(), self.spot.ob_raw_out),
+            UpbitSpotOrderbookStreamHandler::new(symbols.clone(), self.spot.ob_out),
         ));
     }
 }

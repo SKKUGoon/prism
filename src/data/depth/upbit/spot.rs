@@ -146,21 +146,17 @@ impl UpbitSpotOrderbookStreamHandler {
         &self,
         update: &UpbitWebsocketSpotOrderbook,
     ) -> OrderbookUpdateStream {
-        let bids = update
-            .orderbook_units
-            .iter()
-            .map(|unit| (unit.bid_price.to_string(), unit.bid_size.to_string()))
-            .collect();
-
-        let asks = update
-            .orderbook_units
-            .iter()
-            .map(|unit| (unit.ask_price.to_string(), unit.ask_size.to_string()))
-            .collect();
-
         OrderbookUpdateStream {
-            bids,
-            asks,
+            bids: update
+                .orderbook_units
+                .iter()
+                .map(|unit| (unit.bid_price.to_string(), unit.bid_size.to_string()))
+                .collect(),
+            asks: update
+                .orderbook_units
+                .iter()
+                .map(|unit| (unit.ask_price.to_string(), unit.ask_size.to_string()))
+                .collect(),
             trade_time: update.timestamp,
             event_time: update.timestamp,
             last_update_exchange: "Upbit".to_string(),

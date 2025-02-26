@@ -113,8 +113,8 @@ impl BinanceFutureAggTradeStreamHandler {
 
     fn generate_aggtrade_update(&self, update: &BinanceWebsocketFutureAggTrade) -> MarketData {
         MarketData {
-            price: update.data.p.parse().unwrap(),
-            quantity: update.data.q.parse().unwrap(),
+            price: update.data.p.clone(),
+            quantity: update.data.q.clone(),
             buyer_market_maker: update.data.m,
             trade_time: update.data.T,
             event_time: update.data.E,

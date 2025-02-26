@@ -143,21 +143,9 @@ impl BitgetFutureOrderbookStreamHandler {
     }
 
     fn generate_orderbook_update(&self, update: &BitgetDepthMessage) -> OrderbookUpdateStream {
-        let bids = update.data[0]
-            .bids
-            .iter()
-            .map(|(price, quantity)| (price.to_string(), quantity.to_string()))
-            .collect();
-
-        let asks = update.data[0]
-            .asks
-            .iter()
-            .map(|(price, quantity)| (price.to_string(), quantity.to_string()))
-            .collect();
-
         OrderbookUpdateStream {
-            bids,
-            asks,
+            bids: update.data[0].bids.clone(),
+            asks: update.data[0].asks.clone(),
             trade_time: update.data[0].ts.parse::<u64>().unwrap(),
             event_time: update.data[0].ts.parse::<u64>().unwrap(),
             last_update_exchange: "bitget".to_string(),

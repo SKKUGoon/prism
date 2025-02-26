@@ -150,21 +150,9 @@ impl BinanceSpotOrderbookStreamHandler {
     }
 
     fn generate_orderbook_update(&self, update: &SpotDepthEvent) -> OrderbookUpdateStream {
-        let bids = update
-            .b
-            .iter()
-            .map(|(price, quantity)| (price.to_string(), quantity.to_string()))
-            .collect();
-
-        let asks = update
-            .a
-            .iter()
-            .map(|(price, quantity)| (price.to_string(), quantity.to_string()))
-            .collect();
-
         OrderbookUpdateStream {
-            bids,
-            asks,
+            bids: update.b.clone(),
+            asks: update.a.clone(),
             trade_time: update.u,
             event_time: update.E,
             last_update_exchange: "Binance".to_string(),

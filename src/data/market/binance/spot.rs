@@ -97,8 +97,8 @@ impl BinanceSpotAggTradeStreamHandler {
 
     fn generate_aggtrade_update(&self, update: &SpotAggTradeEvent) -> MarketData {
         MarketData {
-            price: update.p.parse().unwrap(),
-            quantity: update.q.parse().unwrap(),
+            price: update.p.clone(),
+            quantity: update.q.clone(),
             buyer_market_maker: update.m,
             trade_time: update.T,
             event_time: update.E,

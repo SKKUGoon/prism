@@ -15,12 +15,12 @@ use crate::data::{
 use log::{error, warn};
 use tokio::task::JoinSet;
 
-pub struct BinanceStreams {
+pub struct BinanceThreads {
     future: FutureDataChannels,
     spot: SpotDataChannels,
 }
 
-impl BinanceStreams {
+impl BinanceThreads {
     pub fn new(future: FutureDataChannels, spot: SpotDataChannels) -> Self {
         Self { future, spot }
     }
@@ -41,7 +41,7 @@ impl BinanceStreams {
             BinanceFutureAggTradeStreamHandler::new(future_symbol.clone(), self.future.agg_out),
         ));
         tasks.spawn(spawn_future_orderbook_task(
-            BinanceFutureOrderbookStreamHandler::new(future_symbol.clone(), self.future.ob_raw_out),
+            BinanceFutureOrderbookStreamHandler::new(future_symbol.clone(), self.future.ob_out),
         ));
         tasks.spawn(spawn_future_liquidation_task(
             BinanceFutureLiquidationStreamHandler::new(future_symbol.clone(), self.future.liq_out),
@@ -55,7 +55,7 @@ impl BinanceStreams {
             BinanceSpotAggTradeStreamHandler::new(spot_symbol.clone(), self.spot.agg_out),
         ));
         tasks.spawn(spawn_spot_orderbook_task(
-            BinanceSpotOrderbookStreamHandler::new(spot_symbol.clone(), self.spot.ob_raw_out),
+            BinanceSpotOrderbookStreamHandler::new(spot_symbol.clone(), self.spot.ob_out),
         ));
     }
 }

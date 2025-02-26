@@ -124,8 +124,8 @@ impl BinanceFutureLiquidationStreamHandler {
     ) -> LiquidationData {
         LiquidationData {
             side: update.data.o.S.clone(),
-            avg_price: update.data.o.ap.parse().unwrap(),
-            quantity: update.data.o.q.parse().unwrap(),
+            avg_price: update.data.o.ap.clone(),
+            quantity: update.data.o.q.clone(),
             trade_time: update.data.o.T,
             event_time: update.data.E,
         }

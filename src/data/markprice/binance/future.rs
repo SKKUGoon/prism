@@ -108,9 +108,9 @@ impl BinanceFutureMarkPriceStreamHandler {
 
     fn generate_markprice_update(&self, update: &BinanceWebsocketFutureMarkPrice) -> MarkPriceData {
         MarkPriceData {
-            mark_price: update.data.p.parse().unwrap(),
-            index_price: update.data.i.parse().unwrap(),
-            funding_rate: update.data.r.parse().unwrap(),
+            mark_price: update.data.p.clone(),
+            index_price: update.data.i.clone(),
+            funding_rate: update.data.r.clone(),
             next_funding_time: update.data.T,
             event_time: update.data.E,
         }

@@ -1,11 +1,9 @@
 pub mod binance;
 pub mod upbit;
 
-use std::collections::HashMap;
-
 pub struct OrderbookUpdateStream {
-    pub bids: HashMap<String, String>, // key: price, value: order id
-    pub asks: HashMap<String, String>, // key: price, value: order id
+    pub bids: Vec<(String, String)>, // key: price, value: order id
+    pub asks: Vec<(String, String)>, // key: price, value: order id
 
     pub trade_time: u64,
     pub event_time: u64,

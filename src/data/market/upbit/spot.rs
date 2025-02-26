@@ -129,9 +129,9 @@ impl UpbitSpotAggTradeStreamHandler {
 
     fn generate_aggtrade_update(&self, update: &UpbitWebsocketSpotAggTrade) -> MarketData {
         MarketData {
-            price: update.trade_price,
-            quantity: update.trade_volume,
-            buyer_market_maker: update.ask_bid == "ask",
+            price: update.trade_price.to_string(),
+            quantity: update.trade_volume.to_string(),
+            buyer_market_maker: update.ask_bid == "ASK",
             trade_time: update.trade_timestamp,
             event_time: update.timestamp,
         }

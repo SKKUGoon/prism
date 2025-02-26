@@ -166,23 +166,9 @@ impl BinanceFutureOrderbookStreamHandler {
         &self,
         update: &BinanceWebsocketFutureDiffBook,
     ) -> OrderbookUpdateStream {
-        let bids = update
-            .data
-            .b
-            .iter()
-            .map(|(price, quantity)| (price.to_string(), quantity.to_string()))
-            .collect();
-
-        let asks = update
-            .data
-            .a
-            .iter()
-            .map(|(price, quantity)| (price.to_string(), quantity.to_string()))
-            .collect();
-
         OrderbookUpdateStream {
-            bids,
-            asks,
+            bids: update.data.b.clone(),
+            asks: update.data.a.clone(),
             trade_time: update.data.T,
             event_time: update.data.E,
             last_update_exchange: "Binance".to_string(),

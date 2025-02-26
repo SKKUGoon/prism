@@ -1,11 +1,10 @@
 pub mod binance;
 
-// Output data format
 #[derive(Debug)]
 pub struct MarkPriceData {
-    pub mark_price: f32,
-    pub index_price: f32,
-    pub funding_rate: f32,
+    pub mark_price: String,
+    pub index_price: String,
+    pub funding_rate: String,
     pub next_funding_time: u64,
     pub event_time: u64,
 }
