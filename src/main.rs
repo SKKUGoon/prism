@@ -3,7 +3,7 @@ use crate::data::{
     exchanges::{FutureDataChannels, SpotDataChannels},
     upbit::UpbitThreads,
 };
-use channel::{Future, FutureChannel, SpotChannel};
+use channel::{FutureChannel, SpotChannel};
 use config::read_env_config;
 use database::postgres::connect_to_timescale;
 use log::{error, info, warn};

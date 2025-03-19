@@ -1,91 +1,90 @@
-// use crate::data::market::MarketData;
-// use std::collections::VecDeque;
+use super::elements::candle::Candle;
+use rust_decimal::prelude::ToPrimitive;
+use rust_decimal::Decimal;
 
-// #[allow(dead_code)]
-// #[derive(Debug, Clone)]
-// pub struct Bar {
-//     pub id: String,
-//     // Time start, Timestamp
-//     pub ts: Option<u64>,
-//     // Time end, Timestamp
-//     pub te: Option<u64>,
-//     // Price open
-//     pub po: Option<f32>,
-//     // Price high
-//     pub ph: Option<f32>,
-//     // Price low
-//     pub pl: Option<f32>,
-//     // Price close
-//     pub pc: Option<f32>,
-//     // How many ticks in the bar
-//     pub tsize: usize,
-//     // VWAP
-//     pub vwap: f32, // cumul_pv / cumul_v
-//     cumul_pv: f32,
-//     cumul_v: f32,
+pub const GENESIS_COLLECT_PERIOD: usize = 1000 * 1800; // 1800 seconds
 
-//     // Constant
-//     genesis_collect_period: u64,
-//     // Exponential Weighted Moving Average Factor for Ticks
-//     ewma_factor_tsize: f32,
-//     ewma_tsize_t: f32,
-//     // Exponential Weighted Moving Average Factor for Imbalance
-//     ewma_factor_imb: f32,
-//     ewma_imb_t: f32,
-// }
+#[derive(Debug, Clone)]
+pub struct Bar {
+    pub id: uuid::Uuid,
+    pub candle: Candle,
 
-// #[allow(dead_code)]
-// impl Bar {
-//     pub fn new() -> Self {
-//         Self {
-//             id: uuid::Uuid::new_v4().to_string(),
-//             ts: None,
-//             te: None,
-//             po: None,
-//             ph: None,
-//             pl: None,
-//             pc: None,
-//             imb: 0.0,
-//             tsize: 0,
-//             imb_thres: 0.0,
-//             vwap: 0.0,
-//             genesis_collect_period: 5000,
-//             ewma_factor: 0.9,
-//             ewma_imb_current: 0.0,
-//             ewma_t_current: 0.0,
-//             historical_threshold: VecDeque::new(),
-//             cum_price_volume: 0.0,
-//             cum_volume: 0.0,
-//             candle_opened: false,
-//         }
-//     }
+    imbalance_path: Vec<Decimal>,
 
-//     pub fn aggressive(&self) -> f32 {
-//         // Total amount of ticks / Duration to create the bar
-//         if let (Some(ts), Some(te)) = (self.ts, self.te) {
-//             if te - ts > 0 {
-//                 self.tsize as f32 / (te - ts) as f32
-//             } else {
-//                 0.0
-//             }
-//         } else {
-//             0.0
-//         }
-//     }
+    pub threshold: f32,
+    ewma_tick_count_factor: f32,
+    tick_count: usize,
+    ewma_imbalance_factor: f32,
+    cumul_imbalance: f32,
+}
 
-//     pub fn aggressive_vol(&self) -> f32 {
-//         // Total amount of ticks * Cumul Product of price and volume / Duration to create the bar
-//         // Identifies false transactions (small but frequency transaction signals)
-//         if let (Some(ts), Some(te)) = (self.ts, self.te) {
-//             if te - ts > 0 {
-//                 (self.tsize as f32 * self.cum_price_volume) / (te - ts) as f32
-//             } else {
-//                 0.0
-//             }
-//         } else {
-//             0.0
-//         }
-//     }
+impl Bar {
+    pub fn new(ewma_tick_count_factor: f32, ewma_imbalance_factor: f32) -> Self {
+        Self {
+            id: uuid::Uuid::new_v4(),
+            candle: Candle::new(),
+
+            imbalance_path: Vec::new(),
+
+            threshold: 0.0,
+            ewma_tick_count_factor,
+            tick_count: 0,
+            ewma_imbalance_factor,
+            cumul_imbalance: 0.0,
+        }
+    }
+
+    pub fn aggressive(&self) -> Option<f32> {
+        if let (Some(ts), Some(te)) = (self.candle.ts, self.candle.te) {
+            if te - ts > 0 {
+                Some(self.candle.tick_count as f32 / (te - ts) as f32)
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    }
+
+    pub fn aggressive_vol(&self) -> Option<f32> {
+        if let (Some(ts), Some(te)) = (self.candle.ts, self.candle.te) {
+            if te - ts > 0 {
+                Some(
+                    (self.candle.tick_count as f32)
+                        * (self.candle.vwap.cumul_price_volume.to_f32().unwrap_or(0.0))
+                        / (te - ts) as f32,
+                )
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    }
+
+    pub fn reset(&mut self) {
+        // Reset Bar except for `threshold`
+        self.id = uuid::Uuid::new_v4();
+        self.candle = Candle::new();
+        self.imbalance_path.clear();
+        self.cumul_imbalance = 0.0;
+        self.tick_count = 0;
+    }
+}
+
+pub trait BarBehavior {
+    fn new(ewma_tick_count_factor: f32, ewma_imbalance_factor: f32) -> Self;
+    fn aggressive(&self) -> Option<f32>;
+    fn aggressive_vol(&self) -> Option<f32>;
+    fn reset(&mut self);
+}
+
+pub trait BarImpl {
+    fn initiate_bar(&mut self);
+    fn update_bar(&mut self);
+}
+
+pub mod tib;
 
 //     fn threshold_decay(&mut self, initial_value: f32) -> f32 {
 //         let (k1, k2) = (0.0001, 0.01);
@@ -95,30 +94,6 @@
 //             initial_value * (-k2 * ((self.tsize as f32) - 5000.0).sqrt()).exp()
 //         }
 //     }
-
-//     fn update_vwap(&mut self, mkt_data: &MarketData) {
-//         self.cum_price_volume += mkt_data.price * mkt_data.quantity;
-//         self.cum_volume += mkt_data.quantity;
-
-//         if self.cum_volume > 0.0 {
-//             self.vwap = self.cum_price_volume / self.cum_volume;
-//         }
-//     }
-
-//     pub fn reset(&mut self) {
-//         self.id = uuid::Uuid::new_v4().to_string();
-//         self.ts = None;
-//         self.te = None;
-//         self.po = None;
-//         self.ph = None;
-//         self.pl = None;
-//         // Do not reset pc - previous price
-//         self.imb = 0.0;
-//         self.tsize = 0;
-//         self.cum_price_volume = 0.0;
-//         self.cum_volume = 0.0;
-//     }
-// }
 
 // // Trait for different bar implementations
 // pub trait BarImpl: Sized {
